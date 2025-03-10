@@ -49,3 +49,5 @@ Thumbs.db
 # Project specific
 src/main/resources/simulation_results/*
 src/main/resources/market_data/*
+
+src/test/log/*
