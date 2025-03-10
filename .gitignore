@@ -47,5 +47,5 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-src/main/resources/simulation_results/ 
-src/main/resources/market_data/
+src/main/resources/simulation_results/*
+src/main/resources/market_data/*
