@@ -74,14 +74,12 @@ public class TradingSimulator {
             }
             
             marketData.put(symbol, data);
-            System.out.println("Loaded " + data.size() + " records for " + symbol);
         } catch (IOException e) {
             System.err.println("Error loading data for " + file.getFileName() + ": " + e.getMessage());
         }
     }
     
     public SimulationResult runSimulation(String symbol, TradingStrategy strategy) {
-        System.out.println(marketData.size());
         // Convert symbol to uppercase for case-insensitive lookup
         String upperSymbol = symbol.toUpperCase();
         List<MarketData> symbolData = marketData.get(upperSymbol);
@@ -201,8 +199,6 @@ public class TradingSimulator {
             simulator.loadMarketData();
             
             // Select symbol
-            System.out.println("\nAvailable symbols:");
-            simulator.marketData.keySet().forEach(System.out::println);
             System.out.print("\nEnter symbol to trade: ");
             String symbol = scanner.nextLine();
             

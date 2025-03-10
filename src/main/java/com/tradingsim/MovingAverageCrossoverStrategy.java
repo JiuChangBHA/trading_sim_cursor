@@ -2,8 +2,10 @@ package com.tradingsim;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 public class MovingAverageCrossoverStrategy implements TradingStrategy {
+    private static final Logger LOGGER = Logger.getLogger(MovingAverageCrossoverStrategy.class.getName());
     private int fastPeriod = 5;  // Default short MA period
     private int slowPeriod = 20; // Default long MA period
     
@@ -31,6 +33,7 @@ public class MovingAverageCrossoverStrategy implements TradingStrategy {
         double currentSlowMA = calculateSMA(marketData, currentIndex, slowPeriod);
         double previousFastMA = calculateSMA(marketData, previousIndex, fastPeriod);
         double previousSlowMA = calculateSMA(marketData, previousIndex, slowPeriod);
+
         
         // Generate buy signal when fast MA crosses above slow MA
         if (previousFastMA <= previousSlowMA && currentFastMA > currentSlowMA) {
@@ -44,17 +47,18 @@ public class MovingAverageCrossoverStrategy implements TradingStrategy {
         
         return TradingSignal.HOLD;
     }
-    
+
     private double calculateSMA(List<MarketData> data, int endIndex, int period) {
-        double sum = 0;
-        int startIndex = Math.max(0, endIndex - period + 1);
-        
-        for (int i = startIndex; i <= endIndex; i++) {
+        if (endIndex - period + 1 < 0) {
+            throw new IllegalArgumentException("Not enough data to calculate SMA");
+        }
+        double sum = 0.0;
+        for (int i = endIndex - period + 1; i <= endIndex; i++) {
             sum += data.get(i).getClose();
         }
-        
-        return sum / (endIndex - startIndex + 1);
+        return sum / period;
     }
+    
     
     @Override
     public void configure(Scanner scanner) {
