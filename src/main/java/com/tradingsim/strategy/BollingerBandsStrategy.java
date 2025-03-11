@@ -2,16 +2,30 @@ package com.tradingsim.strategy;
 
 import java.util.*;
 import com.tradingsim.model.*;
+import java.util.logging.Logger;
+import java.util.logging.LogManager;
+import java.io.IOException;
 
 /**
  * A strategy that generates buy/sell signals based on Bollinger Bands
  */
 public class BollingerBandsStrategy extends BaseStrategy {
+    private static final Logger LOGGER = Logger.getLogger(BollingerBandsStrategy.class.getName());
     private List<Double> prices = new ArrayList<>();
     private double sma = 0.0;
     private double upperBand = 0.0;
     private double lowerBand = 0.0;
     private double currentPrice = 0.0;
+    
+    static {
+        try {
+            LogManager.getLogManager().readConfiguration(
+                BollingerBandsStrategy.class.getClassLoader().getResourceAsStream("logging.properties")
+            );
+        } catch (IOException e) {
+            LOGGER.severe("Could not load logging.properties file: " + e.getMessage());
+        }
+    }
     
     @Override
     public String getName() {
@@ -40,6 +54,7 @@ public class BollingerBandsStrategy extends BaseStrategy {
         
         // Add price to list
         prices.add(currentPrice);
+        LOGGER.info("Processing price: " + currentPrice + " for date: " + marketData.getDate());
         
         // Get parameters (default values if not specified)
         int period = parameters.containsKey("period") ? 
@@ -49,6 +64,7 @@ public class BollingerBandsStrategy extends BaseStrategy {
         
         // Need at least period prices
         if (prices.size() < period) {
+            LOGGER.info("Insufficient data: " + prices.size() + " < " + period);
             return null;
         }
         
@@ -63,6 +79,7 @@ public class BollingerBandsStrategy extends BaseStrategy {
             sum += price;
         }
         sma = sum / period;
+        LOGGER.info("Calculated SMA: " + sma);
         
         // Calculate standard deviation
         double sumSquaredDiff = 0.0;
@@ -71,29 +88,28 @@ public class BollingerBandsStrategy extends BaseStrategy {
             sumSquaredDiff += diff * diff;
         }
         double stdDev = Math.sqrt(sumSquaredDiff / period);
+        LOGGER.info("Calculated StdDev: " + stdDev);
         
         // Calculate Bollinger Bands
         upperBand = sma + (stdDevMultiplier * stdDev);
         lowerBand = sma - (stdDevMultiplier * stdDev);
-        
-        // Update state
-        state.put("currentPrice", currentPrice);
-        state.put("sma", sma);
-        state.put("upperBand", upperBand);
-        state.put("lowerBand", lowerBand);
+        LOGGER.info(String.format("Bands - Upper: %.2f, Lower: %.2f, Current: %.2f", upperBand, lowerBand, currentPrice));
         
         // Generate signals based on price relative to bands
         if (currentPrice >= upperBand) {
             // Price at or above upper band - SELL
             Position position = positions.get(symbol);
             if (position != null && position.getQuantity() > 0) {
+                LOGGER.info(String.format("Generating SELL signal - Price: %.2f >= Upper Band: %.2f", currentPrice, upperBand));
                 return createSellOrder(symbol, position.getQuantity());
             }
         } else if (currentPrice <= lowerBand) {
             // Price at or below lower band - BUY
+            LOGGER.info(String.format("Generating BUY signal - Price: %.2f <= Lower Band: %.2f", currentPrice, lowerBand));
             return createBuyOrder(symbol, 1.0);
         }
         
+        LOGGER.info("No signal generated - Price within bands");
         return null;
     }
     

@@ -48,25 +48,26 @@ public class MeanReversionStrategy extends BaseStrategy {
                           (double) parameters.get("threshold") : 2.0;
         
         // Need at least period prices
-        if (prices.size() < period) {
+        if (prices.size() <= period) {
             return null;
         }
         
         // Keep only necessary prices
-        while (prices.size() > period) {
+        while (prices.size() >= period + 2) {
             prices.remove(0);
         }
         
         // Calculate mean
         double sum = 0.0;
-        for (double price : prices) {
-            sum += price;
+        for (int i = 0; i < period; i++) {
+            sum += prices.get(i);
         }
         mean = sum / period;
         
         // Calculate standard deviation
         double sumSquaredDiff = 0.0;
-        for (double price : prices) {
+        for (int i = 0; i < period; i++) {
+            double price = prices.get(i);
             double diff = price - mean;
             sumSquaredDiff += diff * diff;
         }
@@ -78,13 +79,7 @@ public class MeanReversionStrategy extends BaseStrategy {
         } else {
             zScore = 0.0;
         }
-        
-        // Update state
-        state.put("currentPrice", currentPrice);
-        state.put("mean", mean);
-        state.put("stdDev", stdDev);
-        state.put("zScore", zScore);
-        
+        System.out.println("currentPrice: " + currentPrice + ", mean: " + mean + ", stdDev: " + stdDev + ", zScore: " + zScore);
         // Generate signals based on z-score
         if (zScore > threshold) {
             // Price significantly above mean - SELL

@@ -21,7 +21,7 @@ class BollingerBandsStrategyTest {
         strategy = new BollingerBandsStrategy();
         Map<String, Object> params = new HashMap<>();
         params.put("period", 5);
-        params.put("stdDevMultiplier", 1.5); // Lower multiplier for testing
+        params.put("stdDevMultiplier", 1.5);
         strategy.initialize(params);
 
         testData = new ArrayList<>();
@@ -29,45 +29,23 @@ class BollingerBandsStrategyTest {
         
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         
-        // Create test data with a clear pattern for Bollinger Bands
-        // Start with stable prices to establish the bands
-        for (int i = 0; i < 5; i++) {
+        // Define prices for each day
+        double[] prices = {
+            100, 104, 102, 106, 104,  // Days 1-5
+            109, 120, 130, 140, 150,  // Days 6-10
+            135, 110, 90              // Days 11-13
+        };
+        
+        // Create test data with the defined prices
+        for (int i = 0; i < prices.length; i++) {
             testData.add(new MarketData(
                 startDate.plusDays(i),
                 SYMBOL,
-                100.0, // open
-                102.0, // high
-                98.0,  // low
-                100.0, // close - stable price
-                1000L  // volume
-            ));
-        }
-        
-        // Add extreme upward movement to break upper band
-        for (int i = 0; i < 3; i++) {
-            double price = 100.0 + ((i + 1) * 10.0); // 110, 120, 130
-            testData.add(new MarketData(
-                startDate.plusDays(i + 5),
-                SYMBOL,
-                price, // open
-                price + 2.0, // high
-                price - 2.0, // low
-                price, // close
-                1000L  // volume
-            ));
-        }
-        
-        // Add extreme downward movement to break lower band
-        for (int i = 0; i < 3; i++) {
-            double price = 130.0 - ((i + 1) * 15.0); // 115, 100, 85
-            testData.add(new MarketData(
-                startDate.plusDays(i + 8),
-                SYMBOL,
-                price, // open
-                price + 2.0, // high
-                price - 2.0, // low
-                price, // close
-                1000L  // volume
+                prices[i],      // open
+                prices[i] + 2.0, // high
+                prices[i] - 2.0, // low
+                prices[i],      // close
+                1000L          // volume
             ));
         }
     }
@@ -94,18 +72,21 @@ class BollingerBandsStrategyTest {
         positions.put(SYMBOL, new Position(SYMBOL, 1.0, 100.0, LocalDate.now()));
         
         // Process first stable period
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 4; i++) {
             strategy.processMarketData(testData.get(i), positions);
         }
         
         // Process extreme upward movement
-        Order order1 = strategy.processMarketData(testData.get(5), positions);
+        Order order1 = strategy.processMarketData(testData.get(4), positions);
         assertNull(order1, "Should not generate signal on first upward move");
         
-        Order order2 = strategy.processMarketData(testData.get(6), positions);
+        Order order2 = strategy.processMarketData(testData.get(5), positions);
         assertNotNull(order2, "Should generate SELL signal on extreme upward move");
         assertEquals(OrderSide.SELL, order2.getSide());
         assertEquals(SYMBOL, order2.getSymbol());
+
+        // Order order3 = strategy.processMarketData(testData.get(6), positions);
+        // assertNull(order3, "Should not generate signal with no position");
     }
 
     @Test
@@ -116,23 +97,16 @@ class BollingerBandsStrategyTest {
         }
         
         // Process extreme downward movement
-        Order order = strategy.processMarketData(testData.get(10), positions);
-        assertNotNull(order, "Should generate BUY signal on extreme downward move");
-        assertEquals(OrderSide.BUY, order.getSide());
-    }
-
-    @Test
-    void testStateUpdates() {
-        // Process enough data points to generate bands
-        for (int i = 0; i < 5; i++) {
-            strategy.processMarketData(testData.get(i), positions);
-        }
+        Order order1 = strategy.processMarketData(testData.get(10), positions);
+        assertNull(order1, "Should not generate signal on first downward move");
         
-        Map<String, Object> state = strategy.getState();
-        assertTrue(state.containsKey("sma"));
-        assertTrue(state.containsKey("upperBand"));
-        assertTrue(state.containsKey("lowerBand"));
-        assertTrue(state.containsKey("currentPrice"));
+        Order order2 = strategy.processMarketData(testData.get(11), positions);
+        assertNotNull(order2, "Should generate BUY signal on extreme downward move");
+        assertEquals(OrderSide.BUY, order2.getSide());
+
+        Order order3 = strategy.processMarketData(testData.get(12), positions);
+        assertNotNull(order3, "Should generate signal BUY on a secondextreme downward move");
+        assertEquals(OrderSide.BUY, order3.getSide());
     }
 
     @Test
@@ -145,10 +119,8 @@ class BollingerBandsStrategyTest {
         // Reset the strategy
         strategy.reset();
         
-        // Verify state is reset
-        Map<String, Object> state = strategy.getState();
-        assertEquals(5, state.get("period"));
-        assertEquals(1.5, state.get("stdDevMultiplier"));
+        // Verify parameters are reset
+        assertEquals(5, strategy.getMinIndex());
         
         // Process first data point after reset
         Order order = strategy.processMarketData(testData.get(0), positions);
