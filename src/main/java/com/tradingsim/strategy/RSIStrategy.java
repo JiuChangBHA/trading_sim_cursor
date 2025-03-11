@@ -52,22 +52,30 @@ public class RSIStrategy extends BaseStrategy {
 
             if (priceWindow.size() == period) {
                 // Calculate RSI
-                double avgGain = 0;
-                double avgLoss = 0;
+                double totalGain = 0;
+                double totalLoss = 0;
+                int gainCount = 0;
+                int lossCount = 0;
+
                 for (double priceChange : priceWindow) {
-                    if (priceChange >= 0) {
-                        avgGain += priceChange;
-                    } else {
-                        avgLoss -= priceChange;
+                    if (priceChange > 0) {
+                        totalGain += priceChange;
+                        gainCount++;
+                    } else if (priceChange < 0) {
+                        totalLoss -= priceChange;
+                        lossCount++;
                     }
                 }
-                avgGain /= period;
-                avgLoss /= period;
+
+                double avgGain = gainCount > 0 ? totalGain / gainCount : 0;
+                double avgLoss = lossCount > 0 ? totalLoss / lossCount : 0;
 
                 double rsi = 100.0;
                 if (avgLoss > 0) {
                     double rs = avgGain / avgLoss;
                     rsi = 100.0 - (100.0 / (1.0 + rs));
+                } else if (avgGain == 0) {
+                    rsi = 50.0;  // Neutral when no movement
                 }
 
                 Position currentPosition = positions.get(marketData.getSymbol());
@@ -95,6 +103,9 @@ public class RSIStrategy extends BaseStrategy {
         super.reset();
         priceWindow.clear();
         lastPrice = null;
+        updateState("period", period);
+        updateState("overboughtThreshold", overboughtThreshold);
+        updateState("oversoldThreshold", oversoldThreshold);
         LOGGER.info("Strategy reset");
     }
 } 

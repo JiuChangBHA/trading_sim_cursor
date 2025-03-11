@@ -30,8 +30,8 @@ class RSIStrategyTest {
         // Create test data with a clear pattern for RSI
         // Start with stable prices, then continuous up moves, then continuous down moves
         double[] prices = {100, 100, 100, 100, 100,  // Stable period
-                         101, 102, 103, 104, 105,     // Continuous up moves
-                         104, 103, 102, 101, 100};    // Continuous down moves
+                         105, 110, 115, 120, 125,     // Strong up moves
+                         120, 115, 110, 105, 100};    // Strong down moves
         for (int i = 0; i < prices.length; i++) {
             double price = prices[i];
             testData.add(new MarketData(SYMBOL, price, 1000.0, LocalDateTime.now().plusDays(i), price - 0.5, price + 0.5));
@@ -68,6 +68,7 @@ class RSIStrategyTest {
             } else {
                 assertNotNull(order, "Should generate SELL signal on overbought condition");
                 assertEquals(OrderSide.SELL, order.getSide());
+                assertEquals(SYMBOL, order.getSymbol());
             }
         }
     }

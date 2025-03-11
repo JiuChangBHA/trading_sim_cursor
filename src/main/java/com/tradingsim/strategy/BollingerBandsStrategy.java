@@ -57,10 +57,11 @@ public class BollingerBandsStrategy extends BaseStrategy {
             Position currentPosition = positions.get(marketData.getSymbol());
             boolean hasPosition = currentPosition != null && currentPosition.getQuantity() != 0;
 
-            if (currentPrice < lowerBand && !hasPosition) {
+            // Generate signals based on price crossing bands
+            if (currentPrice <= lowerBand && !hasPosition) {
                 order = new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.BUY, 1.0);
                 LOGGER.info("BUY signal generated for " + marketData.getSymbol() + " at price " + currentPrice);
-            } else if (currentPrice > upperBand && hasPosition) {
+            } else if (currentPrice >= upperBand && hasPosition) {
                 order = new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.SELL, 1.0);
                 LOGGER.info("SELL signal generated for " + marketData.getSymbol() + " at price " + currentPrice);
             }
@@ -69,6 +70,7 @@ public class BollingerBandsStrategy extends BaseStrategy {
             updateState("sma", sma);
             updateState("upperBand", upperBand);
             updateState("lowerBand", lowerBand);
+            updateState("stdDev", stdDev);
         }
 
         updateState("currentPrice", currentPrice);
@@ -79,6 +81,8 @@ public class BollingerBandsStrategy extends BaseStrategy {
     public void reset() {
         super.reset();
         priceWindow.clear();
+        updateState("period", period);
+        updateState("stdDevMultiplier", stdDevMultiplier);
         LOGGER.info("Strategy reset");
     }
 } 

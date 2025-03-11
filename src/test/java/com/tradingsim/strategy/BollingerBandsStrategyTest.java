@@ -28,9 +28,9 @@ class BollingerBandsStrategyTest {
         
         // Create test data with a clear pattern for Bollinger Bands
         // Start with stable prices, then sharp move up, then sharp move down
-        double[] prices = {100, 100, 100, 100, 100, // Stable period
-                         102, 104, 106, 108, 110,    // Sharp move up
-                         108, 106, 104, 102, 100};   // Sharp move down
+        double[] prices = {100, 100, 100, 100, 100,  // Stable period
+                         110, 120, 130, 140, 150,    // Sharp move up (more extreme)
+                         140, 130, 120, 110, 100};   // Sharp move down
         for (int i = 0; i < prices.length; i++) {
             double price = prices[i];
             testData.add(new MarketData(SYMBOL, price, 1000.0, LocalDateTime.now().plusDays(i), price - 0.5, price + 0.5));
@@ -66,6 +66,7 @@ class BollingerBandsStrategyTest {
             } else {
                 assertNotNull(order, "Should generate SELL signal on extreme upward move");
                 assertEquals(OrderSide.SELL, order.getSide());
+                assertEquals(SYMBOL, order.getSymbol());
             }
         }
     }

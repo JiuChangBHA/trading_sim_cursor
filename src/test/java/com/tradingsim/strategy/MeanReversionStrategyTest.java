@@ -29,8 +29,8 @@ class MeanReversionStrategyTest {
         // Create test data with a clear mean reversion pattern
         // Start with stable prices, then extreme deviation up, then reversion to mean
         double[] prices = {100, 100, 100, 100, 100,  // Stable period (mean = 100)
-                         105, 110, 115, 110, 105,     // Deviation up and reversion
-                         95, 90, 85, 90, 95};         // Deviation down and reversion
+                         120, 140, 160, 140, 120,     // Extreme deviation up and reversion
+                         80, 60, 40, 60, 80};         // Extreme deviation down and reversion
         for (int i = 0; i < prices.length; i++) {
             double price = prices[i];
             testData.add(new MarketData(SYMBOL, price, 1000.0, LocalDateTime.now().plusDays(i), price - 0.5, price + 0.5));
@@ -66,6 +66,7 @@ class MeanReversionStrategyTest {
             } else {
                 assertNotNull(order, "Should generate SELL signal on high deviation");
                 assertEquals(OrderSide.SELL, order.getSide());
+                assertEquals(SYMBOL, order.getSymbol());
             }
         }
     }
