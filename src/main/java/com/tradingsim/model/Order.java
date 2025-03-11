@@ -15,7 +15,8 @@ public class Order {
 
     public enum OrderSide {
         BUY,
-        SELL
+        SELL,
+        HOLD
     }
 
     private String symbol;
