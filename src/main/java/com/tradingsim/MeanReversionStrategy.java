@@ -1,12 +1,12 @@
 package com.tradingsim;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.logging.Logger;
 
 public class MeanReversionStrategy implements TradingStrategy {
+    private static final Logger LOGGER = Logger.getLogger(MeanReversionStrategy.class.getName());
     private int period = 20;
-    private double threshold = 1.5;
+    private double threshold = 2.0;
     
     @Override
     public String getName() {
@@ -16,63 +16,69 @@ public class MeanReversionStrategy implements TradingStrategy {
     @Override
     public void configure(Scanner scanner) {
         System.out.println("\nConfiguring " + getName() + " Strategy");
-        System.out.print("Enter lookback period (default: " + period + "): ");
-        String input = scanner.nextLine();
-        if (!input.trim().isEmpty()) {
+        System.out.print("Enter period (default " + period + "): ");
+        String input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
             period = Integer.parseInt(input);
         }
         
-        System.out.print("Enter z-score threshold (default: " + threshold + "): ");
-        input = scanner.nextLine();
-        if (!input.trim().isEmpty()) {
+        System.out.print("Enter threshold (default " + threshold + "): ");
+        input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
             threshold = Double.parseDouble(input);
         }
         
-        System.out.println("Strategy configured: Period = " + period + 
-                          ", Threshold = " + threshold);
+        System.out.println("Strategy configured: Period = " + period + ", Threshold = " + threshold);
     }
     
     @Override
-    public TradingSignal generateSignal(List<MarketData> marketData) {
-        if (marketData.size() <= period) {
-            return TradingSignal.HOLD; // Not enough data
+    public void initialize(Map<String, Object> parameters) {
+        if (parameters.containsKey("period")) {
+            period = (int) parameters.get("period");
         }
-        
-        List<Double> prices = new ArrayList<>();
-        for (int i = marketData.size() - period; i < marketData.size(); i++) {
-            prices.add(marketData.get(i).getClose());
+        if (parameters.containsKey("threshold")) {
+            threshold = (double) parameters.get("threshold");
         }
-        
-        double mean = calculateMean(prices);
-        double stdDev = calculateStdDev(prices, mean);
-        double currentPrice = marketData.get(marketData.size() - 1).getClose();
-        
-        // Calculate z-score (how many standard deviations from mean)
-        double zScore = (currentPrice - mean) / stdDev;
-        
+    }
+    
+    @Override
+    public Signal generateSignal(List<MarketData> data, int currentIndex) {
+        if (currentIndex < period) {
+            return Signal.HOLD;
+        }
+
+        double sma = calculateSMA(data, currentIndex);
+        double currentPrice = data.get(currentIndex).getClose();
+        double zScore = (currentPrice - sma) / calculateStdDev(data, currentIndex, sma);
+
         if (zScore > threshold) {
-            return TradingSignal.SELL; // Price too high, expect reversion
+            return Signal.SELL;
         } else if (zScore < -threshold) {
-            return TradingSignal.BUY; // Price too low, expect reversion
+            return Signal.BUY;
         }
-        
-        return TradingSignal.HOLD;
+
+        return Signal.HOLD;
     }
     
-    private double calculateMean(List<Double> values) {
+    private double calculateSMA(List<MarketData> data, int currentIndex) {
         double sum = 0;
-        for (double value : values) {
-            sum += value;
+        for (int i = 0; i < period; i++) {
+            sum += data.get(currentIndex - i).getClose();
         }
-        return sum / values.size();
+        return sum / period;
     }
     
-    private double calculateStdDev(List<Double> values, double mean) {
+    private double calculateStdDev(List<MarketData> data, int currentIndex, double mean) {
         double sumSquaredDiff = 0;
-        for (double value : values) {
-            double diff = value - mean;
+        for (int i = 0; i < period; i++) {
+            double diff = data.get(currentIndex - i).getClose() - mean;
             sumSquaredDiff += diff * diff;
         }
-        return Math.sqrt(sumSquaredDiff / values.size());
+        return Math.sqrt(sumSquaredDiff / period);
+    }
+
+    @Override
+    public int getPeriod() {
+        return period;
     }
 } 

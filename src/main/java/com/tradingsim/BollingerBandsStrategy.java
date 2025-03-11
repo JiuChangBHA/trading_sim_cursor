@@ -1,10 +1,10 @@
 package com.tradingsim;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.logging.Logger;
 
 public class BollingerBandsStrategy implements TradingStrategy {
+    private static final Logger LOGGER = Logger.getLogger(BollingerBandsStrategy.class.getName());
     private int period = 20;
     private double stdDevMultiplier = 2.0;
     
@@ -16,64 +16,71 @@ public class BollingerBandsStrategy implements TradingStrategy {
     @Override
     public void configure(Scanner scanner) {
         System.out.println("\nConfiguring " + getName() + " Strategy");
-        System.out.print("Enter period (default: " + period + "): ");
-        String input = scanner.nextLine();
-        if (!input.trim().isEmpty()) {
+        System.out.print("Enter period (default " + period + "): ");
+        String input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
             period = Integer.parseInt(input);
         }
         
-        System.out.print("Enter standard deviation multiplier (default: " + stdDevMultiplier + "): ");
-        input = scanner.nextLine();
-        if (!input.trim().isEmpty()) {
+        System.out.print("Enter standard deviation multiplier (default " + stdDevMultiplier + "): ");
+        input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
             stdDevMultiplier = Double.parseDouble(input);
         }
         
-        System.out.println("Strategy configured: Period = " + period + 
-                          ", StdDev Multiplier = " + stdDevMultiplier);
+        System.out.println("Strategy configured: Period = " + period + ", StdDev Multiplier = " + stdDevMultiplier);
     }
     
     @Override
-    public TradingSignal generateSignal(List<MarketData> marketData) {
-        if (marketData.size() <= period) {
-            return TradingSignal.HOLD; // Not enough data
+    public void initialize(Map<String, Object> parameters) {
+        if (parameters.containsKey("period")) {
+            period = (int) parameters.get("period");
         }
-        
-        List<Double> prices = new ArrayList<>();
-        for (int i = marketData.size() - period; i < marketData.size(); i++) {
-            prices.add(marketData.get(i).getClose());
+        if (parameters.containsKey("stdDevMultiplier")) {
+            stdDevMultiplier = (double) parameters.get("stdDevMultiplier");
         }
-        
-        double sma = calculateSMA(prices);
-        double stdDev = calculateStdDev(prices, sma);
-        
-        double upperBand = sma + (stdDevMultiplier * stdDev);
-        double lowerBand = sma - (stdDevMultiplier * stdDev);
-        
-        double currentPrice = marketData.get(marketData.size() - 1).getClose();
-        
-        if (currentPrice > upperBand) {
-            return TradingSignal.SELL; // Price above upper band
-        } else if (currentPrice < lowerBand) {
-            return TradingSignal.BUY; // Price below lower band
-        }
-        
-        return TradingSignal.HOLD;
     }
     
-    private double calculateSMA(List<Double> prices) {
+    @Override
+    public Signal generateSignal(List<MarketData> data, int currentIndex) {
+        if (currentIndex < period) {
+            return Signal.HOLD;
+        }
+
+        double sma = calculateSMA(data, currentIndex);
+        double stdDev = calculateStdDev(data, currentIndex, sma);
+        double upperBand = sma + (stdDev * stdDevMultiplier);
+        double lowerBand = sma - (stdDev * stdDevMultiplier);
+        double currentPrice = data.get(currentIndex).getClose();
+
+        if (currentPrice < lowerBand) {
+            return Signal.BUY;
+        } else if (currentPrice > upperBand) {
+            return Signal.SELL;
+        }
+
+        return Signal.HOLD;
+    }
+    
+    private double calculateSMA(List<MarketData> data, int currentIndex) {
         double sum = 0;
-        for (double price : prices) {
-            sum += price;
+        for (int i = 0; i < period; i++) {
+            sum += data.get(currentIndex - i).getClose();
         }
-        return sum / prices.size();
+        return sum / period;
     }
     
-    private double calculateStdDev(List<Double> prices, double mean) {
+    private double calculateStdDev(List<MarketData> data, int currentIndex, double mean) {
         double sumSquaredDiff = 0;
-        for (double price : prices) {
-            double diff = price - mean;
+        for (int i = 0; i < period; i++) {
+            double diff = data.get(currentIndex - i).getClose() - mean;
             sumSquaredDiff += diff * diff;
         }
-        return Math.sqrt(sumSquaredDiff / prices.size());
+        return Math.sqrt(sumSquaredDiff / period);
+    }
+
+    @Override
+    public int getPeriod() {
+        return period;
     }
 } 

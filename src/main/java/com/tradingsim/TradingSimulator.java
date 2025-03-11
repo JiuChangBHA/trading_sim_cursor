@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.logging.Logger;
 
 public class TradingSimulator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -14,14 +15,15 @@ public class TradingSimulator {
     
     private final List<TradingStrategy> strategies;
     private final Map<String, List<MarketData>> marketData;
-    private final TradingAccount account;
+    private final double initialCapital;
     private final List<TradeExecuted> trades;
     private final List<Double> equityCurve;
+    private static final Logger LOGGER = Logger.getLogger(TradingSimulator.class.getName());
     
     public TradingSimulator(double initialCapital) {
         this.strategies = new ArrayList<>();
         this.marketData = new HashMap<>();
-        this.account = new TradingAccount(initialCapital);
+        this.initialCapital = initialCapital;
         this.trades = new ArrayList<>();
         this.equityCurve = new ArrayList<>();
         
@@ -79,70 +81,57 @@ public class TradingSimulator {
         }
     }
     
-    public SimulationResult runSimulation(String symbol, TradingStrategy strategy) {
-        // Convert symbol to uppercase for case-insensitive lookup
-        String upperSymbol = symbol.toUpperCase();
-        List<MarketData> symbolData = marketData.get(upperSymbol);
-        
-        if (symbolData == null || symbolData.isEmpty()) {
-            throw new IllegalArgumentException("No market data found for symbol: " + symbol);
-        }
-        
-        // Reset account and trades
-        account.setBalance(account.getInitialBalance());
-        account.setShares(0);
-        trades.clear();
-        equityCurve.clear();
-        
-        // Run simulation
-        for (int i = 0; i < symbolData.size(); i++) {
-            List<MarketData> historicalData = symbolData.subList(0, i + 1);
-            TradingSignal signal = strategy.generateSignal(historicalData);
-            
-            if (signal != TradingSignal.HOLD) {
-                MarketData currentData = historicalData.get(i);
-                executeTrade(signal, currentData);
-            }
-            
-            // Record equity
-            double currentEquity = account.getBalance() + 
-                (account.getShares() * symbolData.get(i).getClose());
-            equityCurve.add(currentEquity);
-        }
-        
-        return new SimulationResult(
-            account.getInitialBalance(),
-            account.getBalance() + (account.getShares() * symbolData.get(symbolData.size() - 1).getClose()),
-            new ArrayList<>(trades),
-            new ArrayList<>(equityCurve),
-            strategy.getName(),
-            symbolData
-        );
+    private void logTrade(TradeExecuted trade) {
+        LOGGER.info(String.format("Trade executed: %s - Signal: %s, Price: %.2f, P/L: %.2f",
+            trade.getDate(), trade.getSignal(), trade.getPrice(), trade.getProfitLoss()));
     }
-    
-    private void executeTrade(TradingSignal signal, MarketData data) {
-        double price = data.getClose();
-        double shares = 0;
-        
-        if (signal == TradingSignal.BUY) {
-            shares = account.getBalance() / price;
-            account.setShares(account.getShares() + shares);
-            account.setBalance(0);
-        } else if (signal == TradingSignal.SELL) {
-            shares = account.getShares();
-            account.setBalance(account.getBalance() + (shares * price));
-            account.setShares(0);
+
+    private void updateEquityCurve(List<Double> equityCurve, double currentEquity) {
+        equityCurve.add(currentEquity);
+    }
+
+    public SimulationResult runSimulation(TradingStrategy strategy, String symbol) {
+        List<MarketData> symbolData = marketData.get(symbol);
+        if (symbolData == null || symbolData.isEmpty()) {
+            throw new IllegalArgumentException("No market data available for symbol: " + symbol);
         }
-        
-        if (shares > 0) {
-            trades.add(new TradeExecuted(
-                data.getDate(),
-                signal,
-                shares,
-                price,
-                shares * price
-            ));
+
+        List<TradeExecuted> trades = new ArrayList<>();
+        List<Double> equityCurve = new ArrayList<>();
+        double currentCapital = initialCapital;
+        int currentShares = 0;
+
+        // Initialize strategy with parameters
+        strategy.initialize(new HashMap<>());
+
+        for (int i = strategy.getPeriod(); i < symbolData.size(); i++) {
+            Signal signal = strategy.generateSignal(symbolData, i);
+            double currentPrice = symbolData.get(i).getClose();
+            LocalDate currentDate = symbolData.get(i).getDate();
+
+            if (signal == Signal.BUY && currentShares == 0) {
+                int sharesToBuy = (int) (currentCapital / currentPrice);
+                if (sharesToBuy > 0) {
+                    currentShares = sharesToBuy;
+                    double cost = currentShares * currentPrice;
+                    currentCapital -= cost;
+                    trades.add(new TradeExecuted(currentDate, signal, currentPrice, 0));
+                    logTrade(trades.get(trades.size() - 1));
+                }
+            } else if (signal == Signal.SELL && currentShares > 0) {
+                double saleProceeds = currentShares * currentPrice;
+                double profitLoss = saleProceeds - (currentShares * trades.get(trades.size() - 1).getPrice());
+                currentCapital += saleProceeds;
+                currentShares = 0;
+                trades.add(new TradeExecuted(currentDate, signal, currentPrice, profitLoss));
+                logTrade(trades.get(trades.size() - 1));
+            }
+
+            // Update equity curve
+            equityCurve.add(currentCapital + (currentShares * currentPrice));
         }
+
+        return new SimulationResult(trades, equityCurve);
     }
     
     public void exportResults(SimulationResult result, String symbol) throws IOException {
@@ -152,32 +141,25 @@ public class TradingSimulator {
         }
         
         String timestamp = LocalDate.now().format(DATE_FORMATTER);
-        String filename = String.format("%s_%s_%s.csv", 
-            symbol, result.getStrategyName().replaceAll("\\s+", "_"), timestamp);
-        
+        String filename = String.format("%s_simulation_%s.csv", symbol, timestamp);
         Path outputFile = resultsPath.resolve(filename);
         
         try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputFile))) {
             // Write header
-            writer.println("Date,Signal,Shares,Price,Value,Equity");
+            writer.println("Date,Signal,Price,ProfitLoss,Equity");
             
             // Write trades
-            for (TradeExecuted trade : result.getTrades()) {
-                // Find the corresponding equity value for this trade's date
-                double equity = 0;
-                for (int i = 0; i < result.getMarketData().size(); i++) {
-                    if (result.getMarketData().get(i).getDate().equals(trade.getDate())) {
-                        equity = result.getEquityCurve().get(i);
-                        break;
-                    }
-                }
+            List<TradeExecuted> trades = result.getTrades();
+            List<Double> equityCurve = result.getEquityCurve();
+            for (int i = 0; i < trades.size(); i++) {
+                TradeExecuted trade = trades.get(i);
+                double equity = i < equityCurve.size() ? equityCurve.get(i) : equityCurve.get(equityCurve.size() - 1);
                 
-                writer.printf("%s,%s,%.2f,%.2f,%.2f,%.2f%n",
+                writer.printf("%s,%s,%.2f,%.2f,%.2f%n",
                     trade.getDate(),
                     trade.getSignal(),
-                    trade.getShares(),
                     trade.getPrice(),
-                    trade.getValue(),
+                    trade.getProfitLoss(),
                     equity
                 );
             }
@@ -216,7 +198,7 @@ public class TradingSimulator {
             
             // Run simulation
             System.out.println("\nRunning simulation...");
-            SimulationResult result = simulator.runSimulation(symbol, strategy);
+            SimulationResult result = simulator.runSimulation(strategy, symbol);
             
             // Print results
             System.out.println("\nSimulation Results:");

@@ -4,23 +4,30 @@ import java.time.LocalDate;
 
 public class TradeExecuted {
     private LocalDate date;
-    private TradingSignal signal;
-    private double shares;
+    private Signal signal;
     private double price;
-    private double value;
-    
-    public TradeExecuted(LocalDate date, TradingSignal signal, double shares, 
-                        double price, double value) {
+    private double profitLoss;
+
+    public TradeExecuted(LocalDate date, Signal signal, double price, double profitLoss) {
         this.date = date;
         this.signal = signal;
-        this.shares = shares;
         this.price = price;
-        this.value = value;
+        this.profitLoss = profitLoss;
     }
-    
-    public LocalDate getDate() { return date; }
-    public TradingSignal getSignal() { return signal; }
-    public double getShares() { return shares; }
-    public double getPrice() { return price; }
-    public double getValue() { return value; }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public Signal getSignal() {
+        return signal;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public double getProfitLoss() {
+        return profitLoss;
+    }
 } 
