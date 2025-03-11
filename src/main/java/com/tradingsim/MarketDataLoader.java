@@ -112,4 +112,12 @@ public class MarketDataLoader {
         }
         return result;
     }
+
+    /**
+     * Get all market data
+     * @return Map of symbol to market data
+     */
+    public Map<String, List<MarketData>> getAllData() {
+        return new HashMap<>(testData);
+    }
 } 

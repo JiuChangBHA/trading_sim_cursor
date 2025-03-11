@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
 import com.tradingsim.model.*;
 import com.tradingsim.model.Order.OrderSide;
@@ -27,14 +28,48 @@ class RSIStrategyTest {
         testData = new ArrayList<>();
         positions = new HashMap<>();
         
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        
         // Create test data with a clear pattern for RSI
-        // Start with stable prices, then continuous up moves, then continuous down moves
-        double[] prices = {100, 100, 100, 100, 100,  // Stable period
-                         105, 110, 115, 120, 125,     // Strong up moves
-                         120, 115, 110, 105, 100};    // Strong down moves
-        for (int i = 0; i < prices.length; i++) {
-            double price = prices[i];
-            testData.add(new MarketData(SYMBOL, price, 1000.0, LocalDateTime.now().plusDays(i), price - 0.5, price + 0.5));
+        // Start with stable prices
+        for (int i = 0; i < 5; i++) {
+            testData.add(new MarketData(
+                startDate.plusDays(i),
+                SYMBOL,
+                100.0, // open
+                102.0, // high
+                98.0,  // low
+                100.0, // close - stable price
+                1000L  // volume
+            ));
+        }
+        
+        // Add continuous up moves to create overbought condition
+        for (int i = 0; i < 5; i++) {
+            double price = 100.0 + ((i + 1) * 5.0); // 105, 110, 115, 120, 125
+            testData.add(new MarketData(
+                startDate.plusDays(i + 5),
+                SYMBOL,
+                price, // open
+                price + 2.0, // high
+                price - 1.0, // low
+                price, // close
+                1000L  // volume
+            ));
+        }
+        
+        // Add continuous down moves to create oversold condition
+        for (int i = 0; i < 5; i++) {
+            double price = 125.0 - ((i + 1) * 8.0); // 117, 109, 101, 93, 85
+            testData.add(new MarketData(
+                startDate.plusDays(i + 10),
+                SYMBOL,
+                price, // open
+                price + 1.0, // high
+                price - 2.0, // low
+                price, // close
+                1000L  // volume
+            ));
         }
     }
 
@@ -58,33 +93,37 @@ class RSIStrategyTest {
     @Test
     void testSellSignalOnOverbought() {
         // Add a position to simulate holding
-        positions.put(SYMBOL, new Position(SYMBOL, 1.0, 100.0));
+        positions.put(SYMBOL, new Position(SYMBOL, 1.0, 100.0, LocalDate.now()));
         
-        // Process data through uptrend
-        for (int i = 0; i < 9; i++) {
-            Order order = strategy.processMarketData(testData.get(i), positions);
-            if (i < 8) {
-                assertNull(order, "Should not generate signal before overbought condition");
-            } else {
-                assertNotNull(order, "Should generate SELL signal on overbought condition");
-                assertEquals(OrderSide.SELL, order.getSide());
-                assertEquals(SYMBOL, order.getSymbol());
-            }
+        // Process stable period and first few up moves
+        for (int i = 0; i < 8; i++) {
+            strategy.processMarketData(testData.get(i), positions);
         }
+        
+        // Process more up moves to reach overbought
+        Order order1 = strategy.processMarketData(testData.get(8), positions);
+        assertNull(order1, "Should not generate signal before reaching overbought");
+        
+        Order order2 = strategy.processMarketData(testData.get(9), positions);
+        assertNotNull(order2, "Should generate SELL signal on overbought condition");
+        assertEquals(OrderSide.SELL, order2.getSide());
+        assertEquals(SYMBOL, order2.getSymbol());
     }
 
     @Test
     void testBuySignalOnOversold() {
-        // Process data through downtrend
-        for (int i = 5; i < 14; i++) {
-            Order order = strategy.processMarketData(testData.get(i), positions);
-            if (i < 13) {
-                assertNull(order, "Should not generate signal before oversold condition");
-            } else {
-                assertNotNull(order, "Should generate BUY signal on oversold condition");
-                assertEquals(OrderSide.BUY, order.getSide());
-            }
+        // Process all data up to down moves
+        for (int i = 0; i < 13; i++) {
+            strategy.processMarketData(testData.get(i), positions);
         }
+        
+        // Process more down moves to reach oversold
+        Order order1 = strategy.processMarketData(testData.get(13), positions);
+        assertNull(order1, "Should not generate signal before reaching oversold");
+        
+        Order order2 = strategy.processMarketData(testData.get(14), positions);
+        assertNotNull(order2, "Should generate BUY signal on oversold condition");
+        assertEquals(OrderSide.BUY, order2.getSide());
     }
 
     @Test

@@ -1,91 +1,21 @@
 package com.tradingsim.strategy;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import com.tradingsim.model.*;
 import java.util.logging.Logger;
-import com.tradingsim.model.MarketData;
-import com.tradingsim.model.Order;
-import com.tradingsim.model.Position;
-import com.tradingsim.model.Order.OrderSide;
-import com.tradingsim.model.Order.OrderType;
+
 
 /**
- * A strategy that generates buy/sell signals based on moving average crossovers.
+ * A strategy that generates buy/sell signals based on fast MA crossing slow MA
  */
-public class MovingAverageCrossoverStrategy implements TradingStrategy {
+public class MovingAverageCrossoverStrategy extends BaseStrategy {
     private static final Logger LOGGER = Logger.getLogger(MovingAverageCrossoverStrategy.class.getName());
-    private int shortPeriod = 10;
-    private int longPeriod = 30;
     private List<Double> prices = new ArrayList<>();
-    private boolean inPosition = false;
-    private double lastFastMA;
-    private double lastSlowMA;
-
-    public MovingAverageCrossoverStrategy() {
-        this.lastFastMA = 0.0;
-        this.lastSlowMA = 0.0;
-    }
-
-    @Override
-    public void initialize(Map<String, Object> parameters) {
-        if (parameters.containsKey("shortPeriod")) {
-            this.shortPeriod = (int) parameters.get("shortPeriod");
-        }
-        if (parameters.containsKey("longPeriod")) {
-            this.longPeriod = (int) parameters.get("longPeriod");
-        }
-        this.prices.clear();
-        this.inPosition = false;
-        this.lastFastMA = 0.0;
-        this.lastSlowMA = 0.0;
-        LOGGER.info("Strategy initialized with short period: " + shortPeriod + ", long period: " + longPeriod);
-    }
-
-    @Override
-    public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
-        // Add the latest price to our list
-        prices.add(marketData.getClose());
-        
-        // We need at least longPeriod prices to calculate moving averages
-        if (prices.size() < longPeriod) {
-            return null;
-        }
-        
-        // Calculate moving averages
-        double shortMA = calculateMA(shortPeriod);
-        double longMA = calculateMA(longPeriod);
-        
-        // Store the latest MAs for state tracking
-        this.lastFastMA = shortMA;
-        this.lastSlowMA = longMA;
-        
-        // Check if we have a position in this symbol
-        boolean hasPosition = positions.containsKey(marketData.getSymbol()) && 
-                             positions.get(marketData.getSymbol()).getQuantity() > 0;
-        
-        // Generate signals based on crossovers
-        if (shortMA > longMA && !hasPosition) {
-            // Bullish crossover - buy signal
-            return new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.BUY, 1.0);
-        } else if (shortMA < longMA && hasPosition) {
-            // Bearish crossover - sell signal
-            return new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.SELL, 1.0);
-        }
-        
-        return null;
-    }
-    
-    private double calculateMA(int period) {
-        int startIdx = prices.size() - period;
-        double sum = 0;
-        for (int i = startIdx; i < prices.size(); i++) {
-            sum += prices.get(i);
-        }
-        return sum / period;
-    }
+    private double fastMA = 0.0;
+    private double slowMA = 0.0;
+    private double currentPrice = 0.0;
+    private boolean fastAboveSlow = false;
+    private boolean initialized = false;
     
     @Override
     public String getName() {
@@ -94,31 +24,100 @@ public class MovingAverageCrossoverStrategy implements TradingStrategy {
     
     @Override
     public String getDescription() {
-        return "Generates signals based on the crossover of short-term and long-term moving averages.";
+        return "Generates signals when fast moving average crosses slow moving average";
     }
     
     @Override
-    public Map<String, Object> getState() {
-        Map<String, Object> state = new HashMap<>();
-        state.put("shortPeriod", shortPeriod);
-        state.put("longPeriod", longPeriod);
-        state.put("inPosition", inPosition);
-        state.put("fastMA", lastFastMA);
-        state.put("slowMA", lastSlowMA);
-        return state;
+    public void initialize(Map<String, Object> parameters) {
+        super.initialize(parameters);
+        prices.clear();
+        fastMA = 0.0;
+        slowMA = 0.0;
+        currentPrice = 0.0;
+        fastAboveSlow = false;
+        initialized = false;
+    }
+    
+    @Override
+    public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
+        currentPrice = marketData.getClose();
+        String symbol = marketData.getSymbol();
+        
+        // Add price to list
+        prices.add(currentPrice);
+        
+        // Get parameters (default values if not specified)
+        int fastPeriod = parameters.containsKey("fastPeriod") ? 
+                        (int) parameters.get("fastPeriod") : 10;
+        int slowPeriod = parameters.containsKey("slowPeriod") ? 
+                        (int) parameters.get("slowPeriod") : 30;
+        
+        // Need at least slowPeriod prices
+        if (prices.size() < slowPeriod) {
+            return null;
+        }
+        
+        // Keep only necessary prices
+        while (prices.size() > slowPeriod) {
+            prices.remove(0);
+        }
+        
+        // Calculate fast MA
+        double fastSum = 0.0;
+        for (int i = prices.size() - fastPeriod; i < prices.size(); i++) {
+            fastSum += prices.get(i);
+        }
+        fastMA = fastSum / fastPeriod;
+        
+        // Calculate slow MA
+        double slowSum = 0.0;
+        for (double price : prices) {
+            slowSum += price;
+        }
+        slowMA = slowSum / slowPeriod;
+        
+        // Check for crossover
+        boolean wasFastAboveSlow = fastAboveSlow;
+        fastAboveSlow = fastMA > slowMA;
+        
+        // If not initialized, just set the initial state
+        if (!initialized) {
+            initialized = true;
+            return null;
+        }
+        
+        // Generate signals on crossover
+        if (wasFastAboveSlow != fastAboveSlow) {
+            if (fastAboveSlow) {
+                // Fast MA crossed above slow MA - BUY
+                return createBuyOrder(symbol, 1.0);
+            } else {
+                // Fast MA crossed below slow MA - SELL
+                Position position = positions.get(symbol);
+                if (position != null && position.getQuantity() > 0) {
+                    return createSellOrder(symbol, position.getQuantity());
+                }
+            }
+        }
+        
+        return null;
     }
     
     @Override
     public int getMinIndex() {
-        return longPeriod;
+        int slowPeriod = parameters.containsKey("slowPeriod") ? 
+                        (int) parameters.get("slowPeriod") : 30;
+        return slowPeriod;
     }
     
     @Override
     public void reset() {
+        super.reset();
         prices.clear();
-        inPosition = false;
-        this.lastFastMA = 0.0;
-        this.lastSlowMA = 0.0;
-        LOGGER.info("Strategy reset");
+        fastMA = 0.0;
+        slowMA = 0.0;
+        currentPrice = 0.0;
+        fastAboveSlow = false;
+        initialized = false;
     }
 } 

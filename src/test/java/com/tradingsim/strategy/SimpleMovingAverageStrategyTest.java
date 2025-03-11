@@ -11,6 +11,7 @@ import com.tradingsim.model.Order;
 import com.tradingsim.model.Position;
 import com.tradingsim.model.Order.OrderSide;
 import com.tradingsim.model.Order.OrderType;
+import java.time.LocalDate;
 
 class SimpleMovingAverageStrategyTest {
     private SimpleMovingAverageStrategy strategy;
@@ -39,30 +40,70 @@ class SimpleMovingAverageStrategyTest {
     @Test
     void testNoSignalBeforeWindowFilled() {
         // Create market data with increasing prices
-        MarketData marketData = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
+        MarketData data = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
         
         // Process first two data points (window size is 3)
-        strategy.processMarketData(marketData, positions);
-        strategy.processMarketData(marketData, positions);
+        strategy.processMarketData(data, positions);
+        strategy.processMarketData(data, positions);
         
         // Should not generate signal yet
-        Order order = strategy.processMarketData(marketData, positions);
+        Order order = strategy.processMarketData(data, positions);
         assertNull(order);
     }
 
     @Test
     void testBuySignalOnCrossover() {
         // Create market data with increasing prices
-        MarketData marketData1 = new MarketData("AAPL", 101.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        MarketData marketData2 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 100.9, 101.1);
-        MarketData marketData3 = new MarketData("AAPL", 102.0, 1000, LocalDateTime.now(), 101.9, 102.1);
-        MarketData marketData4 = new MarketData("AAPL", 103.0, 1000, LocalDateTime.now(), 102.9, 103.1);
+        MarketData newData1 = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        MarketData newData2 = new MarketData(
+            LocalDate.now().minusDays(3),
+            "AAPL",
+            102.0, // open
+            107.0, // high
+            97.0,  // low
+            104.0, // close
+            1000L  // volume
+        );
+        MarketData newData3 = new MarketData(
+            LocalDate.now().minusDays(2),
+            "AAPL",
+            104.0, // open
+            109.0, // high
+            99.0,  // low
+            106.0, // close
+            1000L  // volume
+        );
+        MarketData newData4 = new MarketData(
+            LocalDate.now().minusDays(1),
+            "AAPL",
+            106.0, // open
+            111.0, // high
+            101.0, // low
+            108.0, // close
+            1000L  // volume
+        );
         // Process data points
-        strategy.processMarketData(marketData1, positions);
-        strategy.processMarketData(marketData2, positions);
+        strategy.processMarketData(newData1, positions);
+        strategy.processMarketData(newData2, positions);
         
         // Should generate buy signal on crossover
-        Order order = strategy.processMarketData(marketData3, positions);
+        Order order = strategy.processMarketData(newData3, positions);
         assertNotNull(order);
         assertEquals(OrderSide.BUY, order.getSide());
         assertEquals(OrderType.MARKET, order.getType());
@@ -73,21 +114,53 @@ class SimpleMovingAverageStrategyTest {
     @Test
     void testSellSignalOnCrossover() {
         // First create a position
-        Position position = new Position("AAPL", 1.0, 100.0);
+        Position position = new Position("AAPL", 10, 100.0, LocalDate.now());
         positions.put("AAPL", position);
         
         // Create market data with decreasing prices
-        MarketData marketData1 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 101.9, 102.1);
-        MarketData marketData2 = new MarketData("AAPL", 101.0, 1000, LocalDateTime.now(), 100.9, 101.1);
-        MarketData marketData3 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        MarketData marketData4 = new MarketData("AAPL", 99.0, 1000, LocalDateTime.now(), 98.9, 99.1);
+        MarketData data1 = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        MarketData data2 = new MarketData(
+            LocalDate.now().minusDays(3),
+            "AAPL",
+            101.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        MarketData data3 = new MarketData(
+            LocalDate.now().minusDays(2),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            99.0,  // close
+            1000L  // volume
+        );
+        MarketData data4 = new MarketData(
+            LocalDate.now().minusDays(1),
+            "AAPL",
+            99.0,  // open
+            105.0, // high
+            95.0,  // low
+            98.0,  // close
+            1000L  // volume
+        );
 
         // Process data points
-        strategy.processMarketData(marketData1, positions);
-        strategy.processMarketData(marketData2, positions);
+        strategy.processMarketData(data1, positions);
+        strategy.processMarketData(data2, positions);
         
         // Should generate sell signal on crossover
-        Order order = strategy.processMarketData(marketData3, positions);
+        Order order = strategy.processMarketData(data3, positions);
         assertNotNull(order);
         assertEquals(OrderSide.SELL, order.getSide());
         assertEquals(OrderType.MARKET, order.getType());
@@ -98,26 +171,58 @@ class SimpleMovingAverageStrategyTest {
     @Test
     void testNoSignalWhenNoCrossover() {
         // Create market data with stable prices
-        MarketData marketData1 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        MarketData marketData2 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        MarketData marketData3 = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
+        MarketData data1 = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        MarketData data2 = new MarketData(
+            LocalDate.now().minusDays(3),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        MarketData data3 = new MarketData(
+            LocalDate.now().minusDays(2),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
         
         // Process data points
-        strategy.processMarketData(marketData1, positions);
-        strategy.processMarketData(marketData2, positions);
+        strategy.processMarketData(data1, positions);
+        strategy.processMarketData(data2, positions);
         
         // Should not generate signal
-        Order order = strategy.processMarketData(marketData3, positions);
+        Order order = strategy.processMarketData(data3, positions);
         assertNull(order);
     }
 
     @Test
     void testReset() {
         // Create and process some market data
-        MarketData marketData = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        strategy.processMarketData(marketData, positions);
-        strategy.processMarketData(marketData, positions);
-        strategy.processMarketData(marketData, positions);
+        MarketData data = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        strategy.processMarketData(data, positions);
+        strategy.processMarketData(data, positions);
+        strategy.processMarketData(data, positions);
         
         // Reset the strategy
         strategy.reset();
@@ -127,19 +232,27 @@ class SimpleMovingAverageStrategyTest {
         assertTrue(state.isEmpty());
         
         // Process new data after reset
-        Order order = strategy.processMarketData(marketData, positions);
+        Order order = strategy.processMarketData(data, positions);
         assertNull(order); // Should not generate signal until window is filled again
     }
 
     @Test
     void testStateUpdates() {
-        MarketData marketData = new MarketData("AAPL", 100.0, 1000, LocalDateTime.now(), 99.9, 100.1);
-        strategy.processMarketData(marketData, positions);
-        strategy.processMarketData(marketData, positions);
-        strategy.processMarketData(marketData, positions);
+        MarketData data = new MarketData(
+            LocalDate.now().minusDays(4),
+            "AAPL",
+            100.0, // open
+            105.0, // high
+            95.0,  // low
+            102.0, // close
+            1000L  // volume
+        );
+        strategy.processMarketData(data, positions);
+        strategy.processMarketData(data, positions);
+        strategy.processMarketData(data, positions);
         
         Map<String, Object> state = strategy.getState();
-        assertEquals(100.0, state.get("currentPrice"));
+        assertEquals(102.0, state.get("currentPrice"));
         assertEquals(100.0, state.get("movingAverage"));
     }
 } 

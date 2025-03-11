@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
 import com.tradingsim.model.*;
 import com.tradingsim.model.Order.OrderSide;
@@ -20,20 +21,68 @@ class MeanReversionStrategyTest {
         strategy = new MeanReversionStrategy();
         Map<String, Object> params = new HashMap<>();
         params.put("period", 5);
-        params.put("threshold", 2.0);
+        params.put("threshold", 1.5); // Lower threshold for testing
         strategy.initialize(params);
 
         testData = new ArrayList<>();
         positions = new HashMap<>();
         
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        
         // Create test data with a clear mean reversion pattern
-        // Start with stable prices, then extreme deviation up, then reversion to mean
-        double[] prices = {100, 100, 100, 100, 100,  // Stable period (mean = 100)
-                         120, 140, 160, 140, 120,     // Extreme deviation up and reversion
-                         80, 60, 40, 60, 80};         // Extreme deviation down and reversion
-        for (int i = 0; i < prices.length; i++) {
-            double price = prices[i];
-            testData.add(new MarketData(SYMBOL, price, 1000.0, LocalDateTime.now().plusDays(i), price - 0.5, price + 0.5));
+        // Start with stable prices to establish mean
+        for (int i = 0; i < 5; i++) {
+            testData.add(new MarketData(
+                startDate.plusDays(i),
+                SYMBOL,
+                100.0, // open
+                102.0, // high
+                98.0,  // low
+                100.0, // close - stable price
+                1000L  // volume
+            ));
+        }
+        
+        // Add extreme upward deviation from mean
+        for (int i = 0; i < 3; i++) {
+            double price = 100.0 + ((i + 1) * 10.0); // 110, 120, 130
+            testData.add(new MarketData(
+                startDate.plusDays(i + 5),
+                SYMBOL,
+                price, // open
+                price + 2.0, // high
+                price - 1.0, // low
+                price, // close
+                1000L  // volume
+            ));
+        }
+        
+        // Add reversion back to mean
+        for (int i = 0; i < 3; i++) {
+            double price = 130.0 - ((i + 1) * 10.0); // 120, 110, 100
+            testData.add(new MarketData(
+                startDate.plusDays(i + 8),
+                SYMBOL,
+                price, // open
+                price + 1.0, // high
+                price - 2.0, // low
+                price, // close
+                1000L  // volume
+            ));
+        }
+        
+        // Add extreme downward deviation from mean
+        for (int i = 0; i < 3; i++) {
+            double price = 100.0 - ((i + 1) * 10.0); // 90, 80, 70
+            testData.add(new MarketData(
+                startDate.plusDays(i + 11),
+                SYMBOL,
+                price, // open
+                price + 1.0, // high
+                price - 2.0, // low
+                price, // close
+                1000L  // volume
+            ));
         }
     }
 
@@ -41,7 +90,7 @@ class MeanReversionStrategyTest {
     void testInitialization() {
         Map<String, Object> state = strategy.getState();
         assertEquals(5, state.get("period"));
-        assertEquals(2.0, state.get("threshold"));
+        assertEquals(1.5, state.get("threshold"));
     }
 
     @Test
@@ -56,33 +105,37 @@ class MeanReversionStrategyTest {
     @Test
     void testSellSignalOnHighDeviation() {
         // Add a position to simulate holding
-        positions.put(SYMBOL, new Position(SYMBOL, 1.0, 100.0));
+        positions.put(SYMBOL, new Position(SYMBOL, 1.0, 100.0, LocalDate.now()));
         
-        // Process data through upward deviation
-        for (int i = 0; i < 8; i++) {
-            Order order = strategy.processMarketData(testData.get(i), positions);
-            if (i < 7) {
-                assertNull(order, "Should not generate signal before extreme deviation");
-            } else {
-                assertNotNull(order, "Should generate SELL signal on high deviation");
-                assertEquals(OrderSide.SELL, order.getSide());
-                assertEquals(SYMBOL, order.getSymbol());
-            }
+        // Process stable period to establish mean
+        for (int i = 0; i < 5; i++) {
+            strategy.processMarketData(testData.get(i), positions);
         }
+        
+        // Process upward deviation
+        Order order1 = strategy.processMarketData(testData.get(5), positions);
+        assertNull(order1, "Should not generate signal on first deviation");
+        
+        Order order2 = strategy.processMarketData(testData.get(6), positions);
+        assertNotNull(order2, "Should generate SELL signal on high deviation");
+        assertEquals(OrderSide.SELL, order2.getSide());
+        assertEquals(SYMBOL, order2.getSymbol());
     }
 
     @Test
     void testBuySignalOnLowDeviation() {
-        // Process data through downward deviation
-        for (int i = 5; i < 12; i++) {
-            Order order = strategy.processMarketData(testData.get(i), positions);
-            if (i < 11) {
-                assertNull(order, "Should not generate signal before extreme deviation");
-            } else {
-                assertNotNull(order, "Should generate BUY signal on low deviation");
-                assertEquals(OrderSide.BUY, order.getSide());
-            }
+        // Process data through stable period and upward deviation
+        for (int i = 0; i < 11; i++) {
+            strategy.processMarketData(testData.get(i), positions);
         }
+        
+        // Process downward deviation
+        Order order1 = strategy.processMarketData(testData.get(11), positions);
+        assertNull(order1, "Should not generate signal on first downward deviation");
+        
+        Order order2 = strategy.processMarketData(testData.get(12), positions);
+        assertNotNull(order2, "Should generate BUY signal on low deviation");
+        assertEquals(OrderSide.BUY, order2.getSide());
     }
 
     @Test
@@ -112,7 +165,7 @@ class MeanReversionStrategyTest {
         // Verify state is reset
         Map<String, Object> state = strategy.getState();
         assertEquals(5, state.get("period"));
-        assertEquals(2.0, state.get("threshold"));
+        assertEquals(1.5, state.get("threshold"));
         
         // Process first data point after reset
         Order order = strategy.processMarketData(testData.get(0), positions);

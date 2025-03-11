@@ -1,97 +1,17 @@
 package com.tradingsim.strategy;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
-import com.tradingsim.model.MarketData;
-import com.tradingsim.model.Order;
-import com.tradingsim.model.Position;
-import com.tradingsim.model.Order.OrderSide;
-import com.tradingsim.model.Order.OrderType;
-import java.util.logging.*;
+import java.util.*;
+import com.tradingsim.model.*;
 
 /**
- * A simple moving average crossover strategy.
- * Generates buy signals when price crosses above MA and sell signals when price crosses below MA.
+ * A simple moving average strategy that generates buy/sell signals based on price crossing the moving average
  */
-public class SimpleMovingAverageStrategy implements TradingStrategy {
-    private static final Logger LOGGER = Logger.getLogger(SimpleMovingAverageStrategy.class.getName());
-    private Queue<Double> priceWindow;
-    private int windowSize = 20;
-    private double lastMA;
-    private double lastPrice;
-
-    public SimpleMovingAverageStrategy() {
-        this.priceWindow = new LinkedList<>();
-        this.lastMA = 0.0;
-        this.lastPrice = 0.0;
-    }
-
-    @Override
-    public void initialize(Map<String, Object> parameters) {
-        if (parameters.containsKey("windowSize")) {
-            this.windowSize = (int) parameters.get("windowSize");
-        }
-        priceWindow.clear();
-        lastMA = 0.0;
-        lastPrice = 0.0;
-        LOGGER.info("Strategy initialized with window size: " + windowSize);
-    }
-
-    @Override
-    public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
-        double currentPrice = marketData.getClose();
-        
-        // Update price window
-        priceWindow.offer(currentPrice);
-        if (priceWindow.size() > windowSize) {
-            priceWindow.poll();
-        }
-
-        // Calculate moving average
-        double ma = priceWindow.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        
-        // Generate signals
-        Order order = null;
-        if (priceWindow.size() == windowSize) {
-            Position currentPosition = positions.get(marketData.getSymbol());
-            boolean hasPosition = currentPosition != null && currentPosition.getQuantity() != 0;
-
-            // Check for crossovers
-            boolean crossedAboveMA = currentPrice > ma && lastPrice <= lastMA;
-            boolean crossedBelowMA = currentPrice < ma && lastPrice >= lastMA;
-
-            if (crossedAboveMA && !hasPosition) {
-                // Bullish crossover - Buy signal
-                order = new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.BUY, 1.0);
-                LOGGER.info("BUY signal generated for " + marketData.getSymbol() + " at price " + currentPrice);
-            } else if (crossedBelowMA && hasPosition) {
-                // Bearish crossover - Sell signal
-                order = new Order(marketData.getSymbol(), OrderType.MARKET, OrderSide.SELL, 1.0);
-                LOGGER.info("SELL signal generated for " + marketData.getSymbol() + " at price " + currentPrice);
-            }
-        }
-
-        // Update state
-        lastMA = ma;
-        lastPrice = currentPrice;
-        
-        return order;
-    }
-
-    @Override
-    public void reset() {
-        priceWindow.clear();
-        lastMA = 0.0;
-        lastPrice = 0.0;
-        LOGGER.info("Strategy reset");
-    }
-
-    @Override
-    public int getMinIndex() {
-        return windowSize;
-    }
+public class SimpleMovingAverageStrategy extends BaseStrategy {
+    private List<Double> prices = new ArrayList<>();
+    private double movingAverage = 0.0;
+    private double currentPrice = 0.0;
+    private boolean isAboveMA = false;
+    private boolean initialized = false;
     
     @Override
     public String getName() {
@@ -104,11 +24,85 @@ public class SimpleMovingAverageStrategy implements TradingStrategy {
     }
     
     @Override
-    public Map<String, Object> getState() {
-        Map<String, Object> state = new HashMap<>();
-        state.put("windowSize", windowSize);
-        state.put("movingAverage", lastMA);
-        state.put("currentPrice", lastPrice);
-        return state;
+    public void initialize(Map<String, Object> parameters) {
+        super.initialize(parameters);
+        prices.clear();
+        movingAverage = 0.0;
+        currentPrice = 0.0;
+        isAboveMA = false;
+        initialized = false;
+    }
+    
+    @Override
+    public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
+        currentPrice = marketData.getClose();
+        String symbol = marketData.getSymbol();
+        
+        // Add price to list
+        prices.add(currentPrice);
+        
+        // Get window size from parameters (default to 20)
+        int windowSize = parameters.containsKey("windowSize") ? 
+                        (int) parameters.get("windowSize") : 20;
+        
+        // Keep only the most recent prices based on window size
+        if (prices.size() > windowSize) {
+            prices.remove(0);
+        }
+        
+        // Need at least windowSize prices to calculate MA
+        if (prices.size() < windowSize) {
+            return null;
+        }
+        
+        // Calculate simple moving average
+        double sum = 0.0;
+        for (double price : prices) {
+            sum += price;
+        }
+        movingAverage = sum / prices.size();
+        
+        // Update state
+        state.put("currentPrice", currentPrice);
+        state.put("movingAverage", movingAverage);
+        
+        // Check for crossover
+        boolean wasAboveMA = isAboveMA;
+        isAboveMA = currentPrice > movingAverage;
+        
+        // If not initialized, just set the initial state
+        if (!initialized) {
+            initialized = true;
+            return null;
+        }
+        
+        // Generate signals on crossover
+        if (wasAboveMA != isAboveMA) {
+            if (isAboveMA) {
+                // Price crossed above MA - BUY
+                Position position = positions.get(symbol);
+                if (position == null || position.getQuantity() <= 0) {
+                    return createBuyOrder(symbol, 1.0);
+                }
+            } else {
+                // Price crossed below MA - SELL
+                Position position = positions.get(symbol);
+                if (position != null && position.getQuantity() > 0) {
+                    return createSellOrder(symbol, position.getQuantity());
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    @Override
+    public void reset() {
+        super.reset();
+        prices.clear();
+        movingAverage = 0.0;
+        currentPrice = 0.0;
+        isAboveMA = false;
+        initialized = false;
     }
 } 

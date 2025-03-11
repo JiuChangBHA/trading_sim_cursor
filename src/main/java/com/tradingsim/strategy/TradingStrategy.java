@@ -1,57 +1,55 @@
 package com.tradingsim.strategy;
 
+import java.util.List;
 import java.util.Map;
 import com.tradingsim.model.MarketData;
 import com.tradingsim.model.Order;
 import com.tradingsim.model.Position;
 
 /**
- * Core interface for all trading strategies.
- * Defines the standard contract that all strategy implementations must follow.
+ * Interface for all trading strategies
  */
 public interface TradingStrategy {
+    /**
+     * Get the name of the strategy
+     * @return The strategy name
+     */
+    String getName();
     
     /**
-     * Initialize the strategy with configuration parameters
-     * @param parameters Strategy-specific configuration parameters
+     * Get a description of the strategy
+     * @return The strategy description
+     */
+    String getDescription();
+    
+    /**
+     * Initialize the strategy with parameters
+     * @param parameters Map of parameter names to values
      */
     void initialize(Map<String, Object> parameters);
     
     /**
      * Process new market data and generate trading signals
-     * @param marketData Current market data
-     * @param positions Current portfolio positions
-     * @return Order to be executed, or null if no action should be taken
+     * @param marketData The latest market data
+     * @param positions Current positions held
+     * @return An order to execute, or null if no action should be taken
      */
     Order processMarketData(MarketData marketData, Map<String, Position> positions);
     
     /**
-     * Get the name of the strategy
-     * @return Strategy name
-     */
-    String getName();
-    
-    /**
-     * Get the description of the strategy
-     * @return Strategy description
-     */
-    String getDescription();
-    
-    /**
      * Get the current state of the strategy
-     * @return Map containing strategy state variables
+     * @return Map of state variables
      */
     Map<String, Object> getState();
     
     /**
-     * Get the minimum index of the market data that the strategy can process
-     * This is useful for strategies that require historical data
-     * @return index of the market data
-     */
-    int getMinIndex();
-    
-    /**
-     * Reset the strategy to its initial state
+     * Reset the strategy state
      */
     void reset();
+    
+    /**
+     * Get the minimum number of data points needed before the strategy can generate signals
+     * @return The minimum index
+     */
+    int getMinIndex();
 } 

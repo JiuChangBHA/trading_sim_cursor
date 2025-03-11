@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
 import java.time.LocalDate;
+import com.tradingsim.model.MarketData;
+import com.tradingsim.strategy.MovingAverageCrossoverStrategy;
 
 public class StrategyOptimizerTest {
     private TradingSimulator simulator;
