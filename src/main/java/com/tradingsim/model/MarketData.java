@@ -1,39 +1,41 @@
 package com.tradingsim.model;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
- * Represents market data for a financial instrument at a specific point in time.
+ * Represents daily market data for a financial instrument.
  */
 public class MarketData {
-    private String symbol;
-    private double price;
-    private double volume;
-    private LocalDateTime timestamp;
-    private double bid;
-    private double ask;
+    private final LocalDate date;
+    private final String symbol;
+    private final double open;
+    private final double high;
+    private final double low;
+    private final double close;
+    private final long volume;
 
-    public MarketData(String symbol, double price, double volume, LocalDateTime timestamp, double bid, double ask) {
+    public MarketData(LocalDate date, String symbol, double open, double high, double low, double close, long volume) {
+        this.date = date;
         this.symbol = symbol;
-        this.price = price;
+        this.open = open;
+        this.high = high;
+        this.low = low;
+        this.close = close;
         this.volume = volume;
-        this.timestamp = timestamp;
-        this.bid = bid;
-        this.ask = ask;
     }
 
     // Getters
+    public LocalDate getDate() { return date; }
     public String getSymbol() { return symbol; }
-    public double getPrice() { return price; }
-    public double getVolume() { return volume; }
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public double getBid() { return bid; }
-    public double getAsk() { return ask; }
+    public double getOpen() { return open; }
+    public double getHigh() { return high; }
+    public double getLow() { return low; }
+    public double getClose() { return close; }
+    public long getVolume() { return volume; }
 
-    // Setters
-    public void setPrice(double price) { this.price = price; }
-    public void setVolume(double volume) { this.volume = volume; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-    public void setBid(double bid) { this.bid = bid; }
-    public void setAsk(double ask) { this.ask = ask; }
-} 
+    @Override
+    public String toString() {
+        return String.format("%s: %s O:%.2f H:%.2f L:%.2f C:%.2f V:%d", 
+            date, symbol, open, high, low, close, volume);
+    }
+}

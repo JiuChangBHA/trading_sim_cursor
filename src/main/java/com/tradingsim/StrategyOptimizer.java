@@ -1,5 +1,6 @@
 package com.tradingsim;
-
+import com.tradingsim.strategy.TradingStrategy;
+import com.tradingsim.model.Order;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.concurrent.*;
@@ -92,10 +93,11 @@ public class StrategyOptimizer {
         double sharpeRatio = calculateSharpeRatio(simResult.getEquityCurve());
         double profitLoss = calculateProfitLoss(simResult.getEquityCurve());
         double maxDrawdown = calculateMaxDrawdown(simResult.getEquityCurve());
-        int totalTrades = simResult.getTrades().size();
-        double winRate = calculateWinRate(simResult.getTrades());
+        int totalTrades = simResult.getExecutedOrders().size();
+        double profitFactor = calculateProfitFactor(simResult.getExecutedOrders());
+        double winRate = calculateWinRate(simResult.getExecutedOrders());
 
-        return new OptimizationResult(params, sharpeRatio, profitLoss, maxDrawdown, totalTrades, winRate);
+        return new OptimizationResult(params, sharpeRatio, profitLoss, maxDrawdown, totalTrades, profitFactor);
     }
 
     private double calculateSharpeRatio(List<Double> equityCurve) {
@@ -134,14 +136,32 @@ public class StrategyOptimizer {
         return maxDrawdown;
     }
 
-    private double calculateWinRate(List<TradeExecuted> trades) {
-        if (trades.isEmpty()) return 0;
+    private double calculateProfitFactor(List<Order> orders) {
+        if (orders.isEmpty()) return 0;
         
-        long profitableTrades = trades.stream()
-            .filter(trade -> trade.getProfitLoss() > 0)
+        double totalProfit = 0;
+        double totalLoss = 0;
+        
+        for (Order order : orders) {
+            if (order.getProfitLoss() > 0) {
+                totalProfit += order.getProfitLoss();
+            } else {
+                totalLoss += Math.abs(order.getProfitLoss());
+            }
+        }
+        
+        if (totalLoss == 0) return Double.POSITIVE_INFINITY;
+        return totalProfit / totalLoss;
+    }
+
+    private double calculateWinRate(List<Order> orders) {
+        if (orders.isEmpty()) return 0;
+        
+        long profitableTrades = orders.stream()
+            .filter(order -> order.getProfitLoss() > 0)
             .count();
             
-        return (double) profitableTrades / trades.size();
+        return (double) profitableTrades / orders.size();
     }
 
     private double calculateStdDev(List<Double> values) {

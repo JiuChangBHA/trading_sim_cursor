@@ -118,6 +118,7 @@ class MovingAverageCrossoverStrategyTest {
 
     @Test
     void testNoSignalWithoutPosition() {
+        LOGGER.info("initial positions: " + positions.toString());
         // Process data without having a position
         for (int i = 0; i < 6; i++) {
             Order order = strategy.processMarketData(testData.get(i), positions);

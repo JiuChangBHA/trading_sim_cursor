@@ -44,6 +44,13 @@ public interface TradingStrategy {
     Map<String, Object> getState();
     
     /**
+     * Get the minimum index of the market data that the strategy can process
+     * This is useful for strategies that require historical data
+     * @return index of the market data
+     */
+    int getMinIndex();
+    
+    /**
      * Reset the strategy to its initial state
      */
     void reset();
