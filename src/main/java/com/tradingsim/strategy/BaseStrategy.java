@@ -59,4 +59,17 @@ public abstract class BaseStrategy implements TradingStrategy {
     protected Order createSellOrder(String symbol, double quantity) {
         return new Order(symbol, Order.OrderType.MARKET, Order.OrderSide.SELL, quantity);
     }
+
+    @Override
+    public TradingStrategy duplicate() {
+        try {
+            // Create a new instance of the same class
+            BaseStrategy newStrategy = getClass().getDeclaredConstructor().newInstance();
+            // Copy the parameters
+            newStrategy.initialize(new HashMap<>(parameters));
+            return newStrategy;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to duplicate strategy: " + e.getMessage(), e);
+        }
+    }
 } 

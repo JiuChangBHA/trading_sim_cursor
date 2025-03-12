@@ -1,5 +1,6 @@
 package com.tradingsim.strategy;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.tradingsim.model.MarketData;
@@ -52,4 +53,10 @@ public interface TradingStrategy {
      * @return The minimum index
      */
     int getMinIndex();
+    
+    /**
+     * Creates a copy of the strategy with the same parameters
+     * @return A new instance of the strategy
+     */
+    TradingStrategy duplicate();
 } 

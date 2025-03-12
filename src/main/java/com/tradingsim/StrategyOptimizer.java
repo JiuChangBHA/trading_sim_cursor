@@ -26,6 +26,9 @@ public class StrategyOptimizer {
     }
 
     public List<OptimizationResult> optimize(TradingStrategy strategy) {
+        // Clear previous results
+        results.clear();
+        
         List<Map<String, Object>> parameterCombinations = generateParameterCombinations();
         LOGGER.info("Starting optimization with " + parameterCombinations.size() + " parameter combinations");
 
@@ -34,20 +37,43 @@ public class StrategyOptimizer {
 
         // Submit tasks for parallel execution
         for (Map<String, Object> params : parameterCombinations) {
-            futures.add(executor.submit(() -> evaluateParameters(strategy, params)));
+            // Create a deep copy of the parameters to avoid sharing objects between threads
+            Map<String, Object> paramsCopy = new HashMap<>(params);
+            futures.add(executor.submit(() -> evaluateParameters(strategy.duplicate(), paramsCopy)));
         }
 
+        // Create a local list to collect results
+        List<OptimizationResult> localResults = Collections.synchronizedList(new ArrayList<>());
+        
         // Collect results
         for (Future<OptimizationResult> future : futures) {
             try {
                 OptimizationResult result = future.get();
-                results.add(result);
+                if (result != null) {
+                    localResults.add(result);
+                }
             } catch (Exception e) {
                 LOGGER.warning("Error evaluating parameters: " + e.getMessage());
+                // Print the full stack trace for better debugging
+                e.printStackTrace();
             }
         }
 
         executor.shutdown();
+        try {
+            // Wait for all tasks to complete with a timeout
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            LOGGER.warning("Executor interrupted: " + e.getMessage());
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        
+        // Add to results after all processing is complete
+        results.addAll(localResults);
+        
         Collections.sort(results); // Sort by Sharpe ratio
         return results;
     }
@@ -83,21 +109,38 @@ public class StrategyOptimizer {
     }
 
     private OptimizationResult evaluateParameters(TradingStrategy strategy, Map<String, Object> params) {
-        // Configure strategy with parameters
-        strategy.initialize(params);
-        
-        // Run simulation
-        SimulationResult simResult = simulator.runSimulation(strategy, symbol);
-        
-        // Calculate metrics
-        double sharpeRatio = calculateSharpeRatio(simResult.getEquityCurve());
-        double profitLoss = calculateProfitLoss(simResult.getEquityCurve());
-        double maxDrawdown = calculateMaxDrawdown(simResult.getEquityCurve());
-        int totalTrades = simResult.getExecutedOrders().size();
-        double profitFactor = calculateProfitFactor(simResult.getExecutedOrders());
-        double winRate = calculateWinRate(simResult.getExecutedOrders());
-
-        return new OptimizationResult(params, sharpeRatio, profitLoss, maxDrawdown, totalTrades, profitFactor);
+        try {
+            LOGGER.info("Evaluating parameters (thread " + Thread.currentThread().getId() + "): " + params);
+            
+            // Make a defensive copy of the parameters
+            Map<String, Object> paramsCopy = new HashMap<>(params);
+            
+            // Configure strategy with parameters
+            strategy.initialize(paramsCopy);
+            
+            // Run simulation
+            SimulationResult simResult = simulator.runSimulation(strategy, symbol);
+            
+            // Create defensive copies of collections from the simulation result
+            List<Double> equityCurveCopy = new ArrayList<>(simResult.getEquityCurve());
+            List<Order> ordersCopy = new ArrayList<>(simResult.getExecutedOrders());
+            
+            // Calculate metrics using the copies
+            double sharpeRatio = calculateSharpeRatio(equityCurveCopy);
+            double profitLoss = calculateProfitLoss(equityCurveCopy);
+            double maxDrawdown = calculateMaxDrawdown(equityCurveCopy);
+            int totalTrades = ordersCopy.size();
+            double profitFactor = calculateProfitFactor(ordersCopy);
+            double winRate = calculateWinRate(ordersCopy);
+            
+            LOGGER.info("Successfully evaluated parameters (thread " + Thread.currentThread().getId() + "): " + params);
+            return new OptimizationResult(paramsCopy, sharpeRatio, profitLoss, maxDrawdown, totalTrades, profitFactor);
+        } catch (Exception e) {
+            LOGGER.warning("Error in thread " + Thread.currentThread().getId() + " evaluating parameters " + params + ": " + e.getClass().getName() + ": " + e.getMessage());
+            // Print the stack trace for debugging
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private double calculateSharpeRatio(List<Double> equityCurve) {

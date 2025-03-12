@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
+import java.io.IOException;
 import java.time.LocalDate;
 import com.tradingsim.model.MarketData;
 import com.tradingsim.strategy.MovingAverageCrossoverStrategy;
@@ -11,17 +12,19 @@ import com.tradingsim.strategy.MovingAverageCrossoverStrategy;
 public class StrategyOptimizerTest {
     private TradingSimulator simulator;
     private StrategyOptimizer optimizer;
-    private static final String TEST_SYMBOL = "TEST";
+    private static final String TEST_SYMBOL = "AAPL";
     private List<MarketData> testData;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         simulator = new TradingSimulator(10000.0);
         optimizer = new StrategyOptimizer(simulator, TEST_SYMBOL);
         testData = createTestMarketData();
         
         // Load test data into simulator
         MarketDataLoader.getInstance().addTestData(TEST_SYMBOL, testData);
+        // Load market data
+        simulator.loadMarketData();
     }
 
     private List<MarketData> createTestMarketData() {
