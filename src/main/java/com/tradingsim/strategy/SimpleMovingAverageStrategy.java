@@ -105,4 +105,9 @@ public class SimpleMovingAverageStrategy extends BaseStrategy {
         isAboveMA = false;
         initialized = false;
     }
+
+    @Override
+    public int getMinIndex() {
+        return (int) parameters.get("windowSize");
+    }
 } 

@@ -24,11 +24,11 @@ class RSIStrategyTest {
         params.put("overboughtThreshold", 70.0);
         params.put("oversoldThreshold", 30.0);
         strategy.initialize(params);
-        List<MarketData> testData = new ArrayList<>();
-        this.positions = new HashMap<>();
 
-        LocalDate startDate = LocalDate.of(2020, 1, 1);
-        String SYMBOL = "TEST";
+        testData = new ArrayList<>();
+        positions = new HashMap<>();
+        
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
         
         // 1. Stable period (baseline)
         for (int i = 0; i < 5; i++) {
@@ -98,7 +98,6 @@ class RSIStrategyTest {
                 1000L            // volume
             ));
         }
-        this.testData = testData;
     }
 
     @Test
