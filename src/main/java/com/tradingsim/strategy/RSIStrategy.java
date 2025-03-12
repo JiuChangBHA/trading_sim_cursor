@@ -78,10 +78,6 @@ public class RSIStrategy extends BaseStrategy {
             rsi = 100.0 - (100.0 / (1.0 + rs));
         }
         
-        // Update state
-        state.put("currentPrice", currentPrice);
-        state.put("rsi", rsi);
-        
         // Generate signals based on RSI thresholds
         if (rsi >= overboughtThreshold) {
             // Overbought condition - SELL
