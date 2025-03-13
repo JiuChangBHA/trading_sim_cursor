@@ -1,5 +1,6 @@
 package com.tradingsim;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -140,15 +141,31 @@ public class MarketDataLoader {
             .filter(Files::isDirectory)
             .map(p -> p.getFileName().toString())
             .collect(Collectors.toList());
+        System.out.println("Symbols: " + symbols);
         loadMarketData(symbols);
     }
     
 
     /**
-     * Get all symbols
-     * @return List of symbols
-     */
-    public List<String> getSymbols() {
+     * Returns a list of symbols based on CSV file names in the given directory.
+     * Files must be named in the format: <symbol>_data.csv
+     *
+     * @return list of symbols extracted from file names.
+    */
+    public List<String> getSymbols() throws IOException {
+        Path dataDir = getLatestDataDirectory();
+        List<String> symbols = new ArrayList<>();
+        
+        // Filter files that end with "_data.csv"
+        File[] files = dataDir.toFile().listFiles((dir, name) -> name.endsWith("_data.csv"));
+        if (files != null) {
+            for (File file : files) {
+                String fileName = file.getName();
+                // Remove the "_data.csv" suffix to get the symbol
+                String symbol = fileName.substring(0, fileName.length() - "_data.csv".length());
+                symbols.add(symbol);
+            }
+        }
         return symbols;
     }
 }

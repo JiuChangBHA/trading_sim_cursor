@@ -15,13 +15,14 @@ public class OptimizationResult implements Comparable<OptimizationResult> {
     private double winRate; // Optional, calculated separately if needed
 
     public OptimizationResult(Map<String, Object> parameters, double sharpeRatio, double profitLoss, 
-                             double maxDrawdown, int totalTrades, double profitFactor) {
+                             double maxDrawdown, int totalTrades, double profitFactor, double winRate) {
         this.parameters = parameters;
         this.sharpeRatio = sharpeRatio;
         this.profitLoss = profitLoss;
         this.maxDrawdown = maxDrawdown;
         this.totalTrades = totalTrades;
         this.profitFactor = profitFactor;
+        this.winRate = winRate;
     }
 
     public Map<String, Object> getParameters() {
@@ -55,6 +56,7 @@ public class OptimizationResult implements Comparable<OptimizationResult> {
     public void setWinRate(double winRate) {
         this.winRate = winRate;
     }
+    
 
     @Override
     public int compareTo(OptimizationResult other) {

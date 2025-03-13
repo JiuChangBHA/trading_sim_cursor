@@ -191,16 +191,16 @@ public class StrategyOptimizerTest {
     @Test
     void testResultComparison() {
         OptimizationResult result1 = new OptimizationResult(
-            new HashMap<>(), 1.5, 0.2, 0.1, 10, 0.6);
+            new HashMap<>(), 1.5, 0.2, 0.1, 10, 0.6, 0.6);
         OptimizationResult result2 = new OptimizationResult(
-            new HashMap<>(), 1.0, 0.3, 0.15, 15, 0.7);
+            new HashMap<>(), 1.0, 0.3, 0.15, 15, 0.7, 0.7);
         
         assertTrue(result1.compareTo(result2) < 0,
                   "Higher Sharpe ratio should be preferred");
         
         // Test equality
         OptimizationResult result3 = new OptimizationResult(
-            new HashMap<>(), 1.5, 0.4, 0.2, 20, 0.8);
+            new HashMap<>(), 1.5, 0.4, 0.2, 20, 0.8, 0.8);
         assertEquals(0, result1.compareTo(result3),
                     "Equal Sharpe ratios should be considered equal");
     }

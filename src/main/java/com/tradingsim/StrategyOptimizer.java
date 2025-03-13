@@ -21,6 +21,11 @@ public class StrategyOptimizer {
         this.threads = Runtime.getRuntime().availableProcessors();
     }
 
+    public void reset() {
+        this.parameterRanges.clear();
+        this.results.clear();
+    }
+
     public void addParameterRange(String paramName, List<Object> values) {
         parameterRanges.put(paramName, values);
     }
@@ -29,11 +34,10 @@ public class StrategyOptimizer {
         // Clear previous results
         results.clear();
         List<Map<String, Object>> parameterCombinations = generateParameterCombinations(strategy);
-        LOGGER.info("Starting optimization with " + parameterCombinations.size() + " parameter combinations");
+        // LOGGER.info("Starting optimization with " + parameterCombinations.size() + " parameter combinations");
 
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         List<Future<OptimizationResult>> futures = new ArrayList<>();
-        LOGGER.info("Results: " + results);
 
         // Submit tasks for parallel execution
         for (Map<String, Object> params : parameterCombinations) {
@@ -113,8 +117,6 @@ public class StrategyOptimizer {
 
     private OptimizationResult evaluateParameters(TradingStrategy strategy, Map<String, Object> params) {
         try {
-            LOGGER.info("Evaluating parameters (thread " + Thread.currentThread().getId() + "): " + params);
-            
             // Make a defensive copy of the parameters
             Map<String, Object> paramsCopy = new HashMap<>(params);
             
@@ -136,8 +138,7 @@ public class StrategyOptimizer {
             double profitFactor = calculateProfitFactor(ordersCopy);
             double winRate = calculateWinRate(ordersCopy);
             
-            LOGGER.info("Successfully evaluated parameters (thread " + Thread.currentThread().getId() + "): " + params);
-            return new OptimizationResult(paramsCopy, sharpeRatio, profitLoss, maxDrawdown, totalTrades, profitFactor);
+            return new OptimizationResult(paramsCopy, sharpeRatio, profitLoss, maxDrawdown, totalTrades, profitFactor, winRate);
         } catch (Exception e) {
             LOGGER.warning("Error in thread " + Thread.currentThread().getId() + " evaluating parameters " + params + ": " + e.getClass().getName() + ": " + e.getMessage());
             // Print the stack trace for debugging

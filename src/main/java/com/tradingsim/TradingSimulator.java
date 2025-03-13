@@ -102,7 +102,7 @@ public class TradingSimulator {
                         // Execute the order
                         order.execute(currentDate, currentPrice, 0);
                         executedOrders.add(order);
-                        logTrade(order);
+                        // logTrade(order);
                     }
                 } else if (order.getSide() == Order.OrderSide.SELL && currentPosition != null && currentPosition.getQuantity() > 0) {
                     double sharesToSell = currentPosition.getQuantity();
@@ -120,7 +120,7 @@ public class TradingSimulator {
                     // Execute the order
                     order.execute(currentDate, currentPrice, realizedPnL);
                     executedOrders.add(order);
-                    logTrade(order);
+                    // logTrade(order);
                     
                     // Reset position
                     currentPosition = null;

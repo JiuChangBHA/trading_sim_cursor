@@ -79,7 +79,6 @@ public class MeanReversionStrategy extends BaseStrategy {
         } else {
             zScore = 0.0;
         }
-        System.out.println("currentPrice: " + currentPrice + ", mean: " + mean + ", stdDev: " + stdDev + ", zScore: " + zScore);
         // Generate signals based on z-score
         if (zScore > threshold) {
             // Price significantly above mean - SELL

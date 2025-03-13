@@ -63,7 +63,6 @@ public class BollingerBandsStrategy extends BaseStrategy {
         
         // Need at least period prices
         if (prices.size() < period) {
-            LOGGER.info("Insufficient data: " + prices.size() + " < " + period);
             return null;
         }
         
