@@ -101,6 +101,25 @@ public class MeanReversionStrategy extends BaseStrategy {
                     (int) parameters.get("period") : 20;
         return period;
     }
+
+    @Override
+    public boolean isValidParameters() {
+        boolean validPeriod = true;
+        boolean validThreshold = true;
+        if (parameters.containsKey("period")) {
+            if (!(parameters.get("period") instanceof Integer)) {   
+                return false;
+            }
+            validPeriod = (int) parameters.get("period") > 0;
+        } 
+        if (parameters.containsKey("threshold")) {
+            if (!(parameters.get("threshold") instanceof Double) && !(parameters.get("threshold") instanceof Integer)) {
+                return false;
+            }
+            validThreshold = (double) parameters.get("threshold") > 0;
+        }
+        return validPeriod && validThreshold;
+    }
     
     @Override
     public void reset() {

@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import com.tradingsim.model.MarketData;
 
@@ -16,15 +17,18 @@ public class MarketDataLoader {
     private static MarketDataLoader instance;
     private final Map<String, List<MarketData>> testData;
     private final Map<String, List<MarketData>> realData;
+    private final List<String> symbols;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final String MARKET_DATA_DIR = "src/main/resources/market_data";
 
-    private MarketDataLoader() {
+    private MarketDataLoader() throws IOException {
         testData = new HashMap<>();
         realData = new HashMap<>();
+        loadMarketData();
+        symbols = new ArrayList<>(realData.keySet());
     }
 
-    public static synchronized MarketDataLoader getInstance() {
+    public static synchronized MarketDataLoader getInstance() throws IOException {
         if (instance == null) {
             instance = new MarketDataLoader();
         }
@@ -46,7 +50,13 @@ public class MarketDataLoader {
         }
         
         if (!realData.containsKey(symbol)) {
-            throw new IllegalArgumentException("No data available for symbol: " + symbol);
+            try {
+                // Try to load the data if not already loaded
+                List<MarketData> data = loadSymbolData(symbol);
+                loadRealData(symbol, data);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("No data available for symbol: " + symbol);
+            }
         }
         return realData.get(symbol);
     }
@@ -56,24 +66,32 @@ public class MarketDataLoader {
     }
 
     /**
-     * Load market data for a specific symbol from a CSV file.
-     * @param symbol The stock symbol
-     * @return List of market data points
-     * @throws IOException If the file cannot be read
+     * Find the most recent data directory
+     * @return Path to the most recent data directory
+     * @throws IOException If no directory can be found
      */
-    public List<MarketData> loadMarketData(String symbol) throws IOException {
+    private Path getLatestDataDirectory() throws IOException {
         Path dataDir = Paths.get(MARKET_DATA_DIR);
         if (!Files.exists(dataDir)) {
             throw new IOException("Market data directory not found: " + MARKET_DATA_DIR);
         }
         
-        // Find the most recent data directory
-        Path latestDir = Files.list(dataDir)
+        return Files.list(dataDir)
             .filter(Files::isDirectory)
             .max(Comparator.comparing(p -> p.getFileName().toString()))
             .orElseThrow(() -> new IOException("No market data directories found"));
-            
+    }
+
+    /**
+     * Load market data for a specific symbol from a CSV file.
+     * @param symbol The stock symbol
+     * @return List of market data points
+     * @throws IOException If the file cannot be read
+     */
+    public List<MarketData> loadSymbolData(String symbol) throws IOException {
+        Path latestDir = getLatestDataDirectory();
         Path dataFile = latestDir.resolve(symbol + "_data.csv");
+        
         if (!Files.exists(dataFile)) {
             throw new IOException("Market data file not found for symbol: " + symbol);
         }
@@ -105,19 +123,32 @@ public class MarketDataLoader {
      * @return Map of symbol to market data
      * @throws IOException If any file cannot be read
      */
-    public Map<String, List<MarketData>> loadMarketData(List<String> symbols) throws IOException {
+    public void loadMarketData(List<String> symbols) throws IOException {
         Map<String, List<MarketData>> result = new HashMap<>();
         for (String symbol : symbols) {
-            result.put(symbol, loadMarketData(symbol));
+            result.put(symbol, loadSymbolData(symbol));
         }
-        return result;
+        realData.putAll(result);
     }
 
     /**
-     * Get all market data
-     * @return Map of symbol to market data
+     * Load all market data from the market data directory
      */
-    public Map<String, List<MarketData>> getAllData() {
-        return new HashMap<>(testData);
+    public void loadMarketData() throws IOException {
+        Path dataDir = getLatestDataDirectory();
+        List<String> symbols = Files.list(dataDir)
+            .filter(Files::isDirectory)
+            .map(p -> p.getFileName().toString())
+            .collect(Collectors.toList());
+        loadMarketData(symbols);
     }
-} 
+    
+
+    /**
+     * Get all symbols
+     * @return List of symbols
+     */
+    public List<String> getSymbols() {
+        return symbols;
+    }
+}

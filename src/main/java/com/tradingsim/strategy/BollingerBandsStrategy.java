@@ -54,7 +54,6 @@ public class BollingerBandsStrategy extends BaseStrategy {
         
         // Add price to list
         prices.add(currentPrice);
-        LOGGER.info("Processing price: " + currentPrice + " for date: " + marketData.getDate());
         
         // Get parameters (default values if not specified)
         int period = parameters.containsKey("period") ? 
@@ -79,7 +78,6 @@ public class BollingerBandsStrategy extends BaseStrategy {
             sum += price;
         }
         sma = sum / period;
-        LOGGER.info("Calculated SMA: " + sma);
         
         // Calculate standard deviation
         double sumSquaredDiff = 0.0;
@@ -88,28 +86,23 @@ public class BollingerBandsStrategy extends BaseStrategy {
             sumSquaredDiff += diff * diff;
         }
         double stdDev = Math.sqrt(sumSquaredDiff / period);
-        LOGGER.info("Calculated StdDev: " + stdDev);
         
         // Calculate Bollinger Bands
         upperBand = sma + (stdDevMultiplier * stdDev);
         lowerBand = sma - (stdDevMultiplier * stdDev);
-        LOGGER.info(String.format("Bands - Upper: %.2f, Lower: %.2f, Current: %.2f", upperBand, lowerBand, currentPrice));
         
         // Generate signals based on price relative to bands
         if (currentPrice >= upperBand) {
             // Price at or above upper band - SELL
             Position position = positions.get(symbol);
             if (position != null && position.getQuantity() > 0) {
-                LOGGER.info(String.format("Generating SELL signal - Price: %.2f >= Upper Band: %.2f", currentPrice, upperBand));
                 return createSellOrder(symbol, position.getQuantity());
             }
         } else if (currentPrice <= lowerBand) {
             // Price at or below lower band - BUY
-            LOGGER.info(String.format("Generating BUY signal - Price: %.2f <= Lower Band: %.2f", currentPrice, lowerBand));
             return createBuyOrder(symbol, 1.0);
         }
         
-        LOGGER.info("No signal generated - Price within bands");
         return null;
     }
     
@@ -118,6 +111,26 @@ public class BollingerBandsStrategy extends BaseStrategy {
         int period = parameters.containsKey("period") ? 
                     (int) parameters.get("period") : 20;
         return period;
+    }
+
+    @Override
+    public boolean isValidParameters() {
+        boolean validPeriod = false;
+        boolean validStdDevMultiplier = false;
+
+        if (parameters.containsKey("period")) {
+            if (!(parameters.get("period") instanceof Integer)) {
+                return false;
+            }
+            validPeriod = (int) parameters.get("period") > 0;
+        }
+        if (parameters.containsKey("stdDevMultiplier")) {
+            if (!(parameters.get("stdDevMultiplier") instanceof Double) && !(parameters.get("stdDevMultiplier") instanceof Integer)) {
+                return false;
+            }
+            validStdDevMultiplier = (double) parameters.get("stdDevMultiplier") > 0;
+        }
+        return validPeriod && validStdDevMultiplier;
     }
     
     @Override

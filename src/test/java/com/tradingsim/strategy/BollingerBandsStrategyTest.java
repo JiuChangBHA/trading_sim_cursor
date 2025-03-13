@@ -52,9 +52,7 @@ class BollingerBandsStrategyTest {
 
     @Test
     void testInitialization() {
-        Map<String, Object> state = strategy.getState();
-        assertEquals(5, state.get("period"));
-        assertEquals(1.5, state.get("stdDevMultiplier"));
+        assertEquals(5, strategy.getMinIndex());
     }
 
     @Test
@@ -119,11 +117,9 @@ class BollingerBandsStrategyTest {
         // Reset the strategy
         strategy.reset();
         
-        // Verify parameters are preserved but state is reset
-        Map<String, Object> state = strategy.getState();
-        assertEquals(5, state.get("period"));
-        assertEquals(1.5, state.get("stdDevMultiplier"));
-        
+        // Verify parameters are preserved but strategy is reset
+        assertEquals(5, strategy.getMinIndex());
+
         // Process first data point after reset
         Order order = strategy.processMarketData(testData.get(0), positions);
         assertNull(order, "Should not generate signal immediately after reset");

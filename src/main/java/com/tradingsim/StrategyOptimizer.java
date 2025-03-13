@@ -28,12 +28,12 @@ public class StrategyOptimizer {
     public List<OptimizationResult> optimize(TradingStrategy strategy) {
         // Clear previous results
         results.clear();
-        
-        List<Map<String, Object>> parameterCombinations = generateParameterCombinations();
+        List<Map<String, Object>> parameterCombinations = generateParameterCombinations(strategy);
         LOGGER.info("Starting optimization with " + parameterCombinations.size() + " parameter combinations");
 
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         List<Future<OptimizationResult>> futures = new ArrayList<>();
+        LOGGER.info("Results: " + results);
 
         // Submit tasks for parallel execution
         for (Map<String, Object> params : parameterCombinations) {
@@ -78,32 +78,35 @@ public class StrategyOptimizer {
         return results;
     }
 
-    private List<Map<String, Object>> generateParameterCombinations() {
+    private List<Map<String, Object>> generateParameterCombinations(TradingStrategy strategy) {
         List<Map<String, Object>> combinations = new ArrayList<>();
         if (parameterRanges.isEmpty()) {
             return combinations;
         }
-        generateCombinationsRecursive(new HashMap<>(), new ArrayList<>(parameterRanges.keySet()), 0, combinations);
+        generateCombinationsRecursive(new HashMap<>(), new ArrayList<>(parameterRanges.keySet()), 0, combinations, strategy);
         return combinations;
     }
 
     private void generateCombinationsRecursive(Map<String, Object> current, List<String> paramNames, 
-                                             int index, List<Map<String, Object>> combinations) {
+                                             int index, List<Map<String, Object>> combinations, TradingStrategy strategy) {
         if (index == paramNames.size()) {
-            combinations.add(new HashMap<>(current));
+            strategy.initialize(current);
+            if (strategy.isValidParameters()) {
+                combinations.add(new HashMap<>(current));
+            }
             return;
         }
 
         String paramName = paramNames.get(index);
         List<Object> values = parameterRanges.get(paramName);
         if (values == null || values.isEmpty()) {
-            generateCombinationsRecursive(current, paramNames, index + 1, combinations);
+            generateCombinationsRecursive(current, paramNames, index + 1, combinations, strategy);
             return;
         }
 
         for (Object value : values) {
             current.put(paramName, value);
-            generateCombinationsRecursive(current, paramNames, index + 1, combinations);
+            generateCombinationsRecursive(current, paramNames, index + 1, combinations, strategy);
         }
         current.remove(paramName); // Clean up after recursion
     }

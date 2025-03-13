@@ -38,12 +38,6 @@ public interface TradingStrategy {
     Order processMarketData(MarketData marketData, Map<String, Position> positions);
     
     /**
-     * Get the current state of the strategy
-     * @return Map of state variables
-     */
-    Map<String, Object> getState();
-    
-    /**
      * Reset the strategy state
      */
     void reset();
@@ -53,6 +47,12 @@ public interface TradingStrategy {
      * @return The minimum index
      */
     int getMinIndex();
+
+    /**
+     * Check if the parameters are valid
+     * @return true if the parameters are valid, false otherwise
+     */
+    boolean isValidParameters();
     
     /**
      * Creates a copy of the strategy with the same parameters

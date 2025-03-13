@@ -2,16 +2,13 @@ package com.tradingsim.strategy;
 
 import java.util.HashMap;
 import java.util.Map;
-import com.tradingsim.model.MarketData;
 import com.tradingsim.model.Order;
-import com.tradingsim.model.Position;
 
 /**
  * Base implementation of the TradingStrategy interface with common functionality
  */
 public abstract class BaseStrategy implements TradingStrategy {
     protected Map<String, Object> parameters = new HashMap<>();
-    protected Map<String, Object> state = new HashMap<>();
     
     @Override
     public void initialize(Map<String, Object> parameters) {
@@ -23,15 +20,7 @@ public abstract class BaseStrategy implements TradingStrategy {
     }
     
     @Override
-    public Map<String, Object> getState() {
-        return new HashMap<>(state);
-    }
-    
-    @Override
     public void reset() {
-        state.clear();
-        // Copy parameters to state for easy access
-        state.putAll(parameters);
     }
     
     @Override
@@ -60,6 +49,14 @@ public abstract class BaseStrategy implements TradingStrategy {
         return new Order(symbol, Order.OrderType.MARKET, Order.OrderSide.SELL, quantity);
     }
 
+    /**
+     * Check if the parameters are valid
+     * @return true if the parameters are valid, false otherwise
+     */
+    public boolean isValidParameters() {
+        return true;
+    }
+
     @Override
     public TradingStrategy duplicate() {
         try {
@@ -72,4 +69,6 @@ public abstract class BaseStrategy implements TradingStrategy {
             throw new RuntimeException("Failed to duplicate strategy: " + e.getMessage(), e);
         }
     }
+
+
 } 

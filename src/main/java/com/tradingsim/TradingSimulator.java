@@ -17,19 +17,18 @@ import com.tradingsim.strategy.BollingerBandsStrategy;
 
 public class TradingSimulator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final String MARKET_DATA_DIR = "src/main/resources/market_data";
     private static final String RESULTS_DIR = "src/main/resources/simulation_results";
     
     private final List<TradingStrategy> strategies;
-    private final Map<String, List<MarketData>> marketData;
+    private final MarketDataLoader marketDataLoader;
     private final double initialCapital;
     private final List<Order> executedOrders;
     private final List<Double> equityCurve;
     private static final Logger LOGGER = Logger.getLogger(TradingSimulator.class.getName());
     
-    public TradingSimulator(double initialCapital) {
+    public TradingSimulator(double initialCapital) throws IOException {
         this.strategies = new ArrayList<>();
-        this.marketData = new HashMap<>();
+        this.marketDataLoader = MarketDataLoader.getInstance();
         this.initialCapital = initialCapital;
         this.executedOrders = new ArrayList<>();
         this.equityCurve = new ArrayList<>();
@@ -40,52 +39,9 @@ public class TradingSimulator {
         strategies.add(new RSIStrategy());
         strategies.add(new BollingerBandsStrategy());
     }
-    
-    public void loadMarketData() throws IOException {
-        Path marketDataPath = Paths.get(MARKET_DATA_DIR);
-        if (!Files.exists(marketDataPath)) {
-            throw new IOException("Market data directory not found: " + MARKET_DATA_DIR);
-        }
-        
-        // Find the most recent market data directory
-        Path latestDir = Files.list(marketDataPath)
-            .filter(Files::isDirectory)
-            .max(Comparator.comparing(p -> p.getFileName().toString()))
-            .orElseThrow(() -> new IOException("No market data directories found"));
-            
-        System.out.println("Loading market data from: " + latestDir);
-        
-        // Load data for each symbol
-        Files.list(latestDir)
-            .filter(p -> p.toString().endsWith(".csv"))
-            .forEach(this::loadSymbolData);
-    }
-    
-    private void loadSymbolData(Path file) {
-        try {
-            String symbol = file.getFileName().toString().replace("_data.csv", "");
-            List<MarketData> data = new ArrayList<>();
-            
-            List<String> lines = Files.readAllLines(file);
-            // Skip header row
-            for (int i = 1; i < lines.size(); i++) {
-                String[] fields = lines.get(i).split(",");
-                MarketData marketData = new MarketData(
-                    LocalDate.parse(fields[0], DATE_FORMATTER),
-                    fields[1], // Use symbol from CSV
-                    Double.parseDouble(fields[2]), // Open
-                    Double.parseDouble(fields[3]), // High
-                    Double.parseDouble(fields[4]), // Low
-                    Double.parseDouble(fields[5]), // Close
-                    (long) Double.parseDouble(fields[6]) // Volume - parse as Double first
-                );
-                data.add(marketData);
-            }
-            
-            marketData.put(symbol, data);
-        } catch (IOException e) {
-            System.err.println("Error loading data for " + file.getFileName() + ": " + e.getMessage());
-        }
+
+    public List<MarketData> getMarketData(String symbol) {
+        return marketDataLoader.getMarketData(symbol);
     }
     
     private void logTrade(Order order) {
@@ -98,7 +54,7 @@ public class TradingSimulator {
     }
 
     public SimulationResult runSimulation(TradingStrategy strategy, String symbol) {
-        List<MarketData> symbolData = marketData.get(symbol);
+        List<MarketData> symbolData = marketDataLoader.getMarketData(symbol);
         if (symbolData == null || symbolData.isEmpty()) {
             throw new IllegalArgumentException("No market data available for symbol: " + symbol);
         }
@@ -110,13 +66,10 @@ public class TradingSimulator {
         Position currentPosition = null;
 
         // Initialize strategy with parameters
-        strategy.initialize(new HashMap<>());
-
         for (int i = strategy.getMinIndex(); i < symbolData.size(); i++) {
             MarketData marketData = symbolData.get(i);
             double currentPrice = marketData.getClose();
             LocalDate currentDate = marketData.getDate();
-            
             // Update position with current price if it exists
             if (currentPosition != null) {
                 currentPosition.setCurrentPrice(currentPrice);
@@ -124,7 +77,6 @@ public class TradingSimulator {
 
             // Process market data with strategy
             Order order = strategy.processMarketData(marketData, positions);
-
             if (order != null) {
                 if (order.getSide() == Order.OrderSide.BUY) {
                     // Calculate how many shares we can buy with current capital
@@ -150,7 +102,7 @@ public class TradingSimulator {
                         // Execute the order
                         order.execute(currentDate, currentPrice, 0);
                         executedOrders.add(order);
-                        // logTrade(order);
+                        logTrade(order);
                     }
                 } else if (order.getSide() == Order.OrderSide.SELL && currentPosition != null && currentPosition.getQuantity() > 0) {
                     double sharesToSell = currentPosition.getQuantity();
@@ -168,16 +120,17 @@ public class TradingSimulator {
                     // Execute the order
                     order.execute(currentDate, currentPrice, realizedPnL);
                     executedOrders.add(order);
-                    // logTrade(order);
+                    logTrade(order);
                     
                     // Reset position
                     currentPosition = null;
                 }
             }
-
-            // Update equity curve (capital + position value)
+            // Calculate the current equity (capital + position value)
             double positionValue = (currentPosition != null) ? currentPosition.getMarketValue() : 0;
-            equityCurve.add(currentCapital + positionValue);
+            double currentEquity = currentCapital + positionValue;
+            // Use the updateEquityCurve method to record the equity value
+            updateEquityCurve(equityCurve, currentEquity);
         }
 
         return new SimulationResult(executedOrders, equityCurve, initialCapital);
@@ -217,18 +170,18 @@ public class TradingSimulator {
         System.out.println("Results exported to: " + outputFile);
     }
     
-    public Map<String, List<MarketData>> getMarketData() {
-        return marketData;
-    }
-    
     public static void main(String[] args) {
         try {
             Scanner scanner = new Scanner(System.in);
             TradingSimulator simulator = new TradingSimulator(100000.0); // $100,000 initial capital
             
-            // Load market data
-            simulator.loadMarketData();
+            // Load all available symbols
+            List<String> availableSymbols = new ArrayList<>();
             
+            // Load market data for all available symbols
+            availableSymbols = simulator.marketDataLoader.getSymbols();
+            System.out.println("Available symbols: " + String.join(", ", availableSymbols));
+         
             // Select symbol
             System.out.print("\nEnter symbol to trade: ");
             String symbol = scanner.nextLine();
@@ -242,7 +195,7 @@ public class TradingSimulator {
             int strategyIndex = Integer.parseInt(scanner.nextLine()) - 1;
             TradingStrategy strategy = simulator.strategies.get(strategyIndex);
             
-            // Configure strategy parameters
+            // Configure strategy parametersdisplay
             Map<String, Object> parameters = new HashMap<>();
             System.out.println("\nEnter strategy parameters:");
             // Add parameter configuration based on strategy type
@@ -268,4 +221,4 @@ public class TradingSimulator {
             e.printStackTrace();
         }
     }
-} 
+}

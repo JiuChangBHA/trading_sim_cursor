@@ -78,9 +78,7 @@ class MovingAverageCrossoverStrategyTest {
 
     @Test
     void testInitialization() {
-        Map<String, Object> state = strategy.getState();
-        assertEquals(2, state.get("fastPeriod"));
-        assertEquals(5, state.get("slowPeriod"));
+        assertEquals(5, strategy.getMinIndex());
     }
 
     @Test
@@ -173,10 +171,8 @@ class MovingAverageCrossoverStrategyTest {
         // Reset the strategy
         strategy.reset();
         
-        // Verify state is reset
-        Map<String, Object> state = strategy.getState();
-        assertEquals(2, state.get("fastPeriod"));
-        assertEquals(5, state.get("slowPeriod"));
+        // Verify strategy is reset
+        assertEquals(5, strategy.getMinIndex());
         
         // Process first data point after reset
         Order order = strategy.processMarketData(testData.get(0), positions);

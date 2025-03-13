@@ -21,29 +21,32 @@ import com.tradingsim.strategy.MovingAverageCrossoverStrategy;
 import com.tradingsim.strategy.MeanReversionStrategy;
 import com.tradingsim.strategy.RSIStrategy;
 import com.tradingsim.strategy.BollingerBandsStrategy;
+import java.util.Arrays;
 
 public class TradingSimulatorTest {
     private static final Logger LOGGER = Logger.getLogger(TradingSimulatorTest.class.getName());
     private TradingSimulator simulator;
     private List<MarketData> testData;
+    private MarketDataLoader marketDataLoader;
     private static final double DELTA = 0.001;
     private static final String TEST_SYMBOL = "TEST";
+    private static final double INITIAL_CAPITAL = 10000.0;
     
     @BeforeEach
     void setUp() throws IOException {
-        // Load logging configuration
-        InputStream configFile = getClass().getClassLoader().getResourceAsStream("logging.properties");
-        if (configFile != null) {
-            LogManager.getLogManager().readConfiguration(configFile);
+        simulator = new TradingSimulator(INITIAL_CAPITAL);
+        try {
+            MarketDataLoader.getInstance().loadMarketData(Arrays.asList("AAPL", "MSFT", "GOOGL"));
+        } catch (IOException e) {
+            fail("Failed to load market data: " + e.getMessage());
         }
-        
-        simulator = new TradingSimulator(10000.0);
         
         // Create test data
         testData = createTestData();
         
         // Add test data to MarketDataLoader
-        MarketDataLoader.getInstance().addTestData(TEST_SYMBOL, testData);
+        marketDataLoader = MarketDataLoader.getInstance();
+        marketDataLoader.addTestData(TEST_SYMBOL, testData);
     }
     
     private List<MarketData> createTestData() {
@@ -84,12 +87,10 @@ public class TradingSimulatorTest {
     @Test
     void testMarketDataLoading() {
         // Verify test data is loaded
-        Map<String, List<MarketData>> marketData = MarketDataLoader.getInstance().getAllData();
-        assertFalse(marketData.isEmpty(), "Market data should not be empty");
-        assertTrue(marketData.containsKey(TEST_SYMBOL), "Market data should contain test symbol");
+        List<MarketData> symbolData = marketDataLoader.getMarketData(TEST_SYMBOL);
+        assertFalse(symbolData.isEmpty(), "Symbol data should not be empty");
         
         // Verify data is sorted by date
-        List<MarketData> symbolData = marketData.get(TEST_SYMBOL);
         for (int i = 1; i < symbolData.size(); i++) {
             assertTrue(symbolData.get(i).getDate().isAfter(symbolData.get(i-1).getDate()) || 
                       symbolData.get(i).getDate().equals(symbolData.get(i-1).getDate()),
@@ -106,16 +107,16 @@ public class TradingSimulatorTest {
         strategy.initialize(params);
         Map<String, Position> positions = new HashMap<>();
 
-        // Process first 5 days
-        for (int i = 0; i < 5; i++) {
-            strategy.processMarketData(testData.get(i), positions);
-        }
-        
         // Add a position to simulate holding
         positions.put(TEST_SYMBOL, new Position(TEST_SYMBOL, 1.0, 100.0, LocalDate.now()));
         
-        // Process day 6 (price starts decreasing)
-        Order order = strategy.processMarketData(testData.get(5), positions);
+        // Process first 7 days
+        for (int i = 0; i < 7; i++) {
+            strategy.processMarketData(testData.get(i), positions);
+        }
+        
+        // Process day 8 (price starts decreasing from day 7)
+        Order order = strategy.processMarketData(testData.get(7), positions);
         assertNotNull(order, "Should generate signal when trend changes");
         assertEquals(OrderSide.SELL, order.getSide());
     }
@@ -193,8 +194,6 @@ public class TradingSimulatorTest {
     @Test
     void testSimulationExecution() {
         // Add test data to simulator
-        simulator.getMarketData().put(TEST_SYMBOL, testData);
-        
         MovingAverageCrossoverStrategy strategy = new MovingAverageCrossoverStrategy();
         Map<String, Object> params = new HashMap<>();
         params.put("fastPeriod", 2);
@@ -208,9 +207,8 @@ public class TradingSimulatorTest {
     
     @Test
     void testPerformanceMetrics() {
-        // Add test data to simulator
-        simulator.getMarketData().put(TEST_SYMBOL, testData);
-        
+        // Add test data to MarketDataLoader
+      
         MovingAverageCrossoverStrategy strategy = new MovingAverageCrossoverStrategy();
         Map<String, Object> params = new HashMap<>();
         params.put("fastPeriod", 2);

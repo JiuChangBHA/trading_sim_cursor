@@ -62,15 +62,10 @@ public class SimpleMovingAverageStrategy extends BaseStrategy {
         }
         movingAverage = sum / prices.size();
         
-        // Update state
-        state.put("currentPrice", currentPrice);
-        state.put("movingAverage", movingAverage);
-        
         // Check for crossover
         boolean wasAboveMA = isAboveMA;
         isAboveMA = currentPrice > movingAverage;
         
-        // If not initialized, just set the initial state
         if (!initialized) {
             initialized = true;
             return null;
@@ -105,6 +100,19 @@ public class SimpleMovingAverageStrategy extends BaseStrategy {
         isAboveMA = false;
         initialized = false;
     }
+
+    @Override
+    public boolean isValidParameters() {
+        boolean validWindowSize = true;
+        if (parameters.containsKey("windowSize")) {
+            if (!(parameters.get("windowSize") instanceof Integer)) {
+                return false;
+            }
+            validWindowSize = (int) parameters.get("windowSize") > 0;
+        }
+        return validWindowSize;
+    }
+    
 
     @Override
     public int getMinIndex() {

@@ -85,7 +85,6 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
             initialized = true;
             return null;
         }
-        
         // Generate signals on crossover
         if (wasFastAboveSlow != fastAboveSlow) {
             if (fastAboveSlow) {
@@ -108,6 +107,17 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
         int slowPeriod = parameters.containsKey("slowPeriod") ? 
                         (int) parameters.get("slowPeriod") : 30;
         return slowPeriod;
+    }
+
+    @Override
+    public boolean isValidParameters() {
+        if (!parameters.containsKey("fastPeriod") || !parameters.containsKey("slowPeriod")) {
+            return true;
+        }
+        if (!(parameters.get("fastPeriod") instanceof Integer) || !(parameters.get("slowPeriod") instanceof Integer)) {
+            return false;
+        }
+        return (int) parameters.get("fastPeriod") < (int) parameters.get("slowPeriod");
     }
     
     @Override

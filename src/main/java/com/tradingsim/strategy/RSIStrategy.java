@@ -99,6 +99,40 @@ public class RSIStrategy extends BaseStrategy {
                     (int) parameters.get("period") : 14;
         return period + 1;
     }
+
+    @Override
+    public boolean isValidParameters() {
+        boolean validPeriod = true;
+        boolean validOverboughtThreshold = true;
+        boolean validOversoldThreshold = true;
+        if (parameters.containsKey("period")) {
+            if (!(parameters.get("period") instanceof Integer)) {
+                return false;
+            }
+            validPeriod = (int) parameters.get("period") > 0;
+        } 
+        if (parameters.containsKey("overboughtThreshold")) {
+            if (!(parameters.get("overboughtThreshold") instanceof Double) && !(parameters.get("overboughtThreshold") instanceof Integer)) {
+                return false;
+            }
+            validOverboughtThreshold = (double) parameters.get("overboughtThreshold") > 0;
+        }
+        if (parameters.containsKey("oversoldThreshold")) {
+            if (!(parameters.get("oversoldThreshold") instanceof Double) && !(parameters.get("oversoldThreshold") instanceof Integer)) {
+                return false;
+            }
+            validOversoldThreshold = (double) parameters.get("oversoldThreshold") > 0;
+        }
+        // if none of the check that the overbought threshold is less than the oversold threshold. if any is not given, it is set to 70 and 30 respectively.
+        if (validOverboughtThreshold && validOversoldThreshold) {
+            double overboughtThreshold = parameters.containsKey("overboughtThreshold") ? 
+            (double) parameters.get("overboughtThreshold") : 70.0;
+            double oversoldThreshold = parameters.containsKey("oversoldThreshold") ? 
+            (double) parameters.get("oversoldThreshold") : 30.0;
+            return validPeriod && (overboughtThreshold < oversoldThreshold);
+        }
+        return false;
+    }
     
     @Override
     public void reset() {
