@@ -34,7 +34,6 @@ class MovingAverageCrossoverStrategyTest {
 
     @BeforeEach
     void setUp() {
-        LOGGER.info("Setting up test case");
         strategy = new MovingAverageCrossoverStrategy();
         Map<String, Object> params = new HashMap<>();
         params.put("fastPeriod", 2);
@@ -135,7 +134,6 @@ class MovingAverageCrossoverStrategyTest {
     void testBuySignalOnCrossover() {
         // Process first 8 days to establish downtrend
         for (int i = 0; i < 8; i++) {
-            LOGGER.info("Processing data point: " + testData.get(i));
             strategy.processMarketData(testData.get(i), positions);
         }
         

@@ -68,7 +68,7 @@ public abstract class BaseStrategy implements TradingStrategy {
                     System.out.println("Parameter 'period' must be greater than 0.");
                     return false;
                 }
-            }
+        }
         
         // Call subclass-specific validations.
         return extraValidations();
