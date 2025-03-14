@@ -129,7 +129,7 @@ public class StrategyOptimizer {
             // Create defensive copies of collections from the simulation result
             List<Double> equityCurveCopy = new ArrayList<>(simResult.getEquityCurve());
             List<Order> ordersCopy = new ArrayList<>(simResult.getExecutedOrders());
-            
+            // List<LocalDate> datesCopy = new ArrayList<>(simResult.getDates());
             // Calculate metrics using the copies
             double sharpeRatio = calculateSharpeRatio(equityCurveCopy);
             double profitLoss = calculateProfitLoss(equityCurveCopy);

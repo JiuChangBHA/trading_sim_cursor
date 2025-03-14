@@ -3,6 +3,8 @@ package com.tradingsim.strategy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+
 import com.tradingsim.model.MarketData;
 import com.tradingsim.model.Order;
 import com.tradingsim.model.Position;
@@ -53,6 +55,12 @@ public interface TradingStrategy {
      * @return true if the parameters are valid, false otherwise
      */
     boolean isValidParameters();
+    
+    /**
+     * Configure the strategy with parameters
+     * @param scanner The scanner to use for input
+     */
+    void configure(Scanner scanner);
     
     /**
      * Creates a copy of the strategy with the same parameters

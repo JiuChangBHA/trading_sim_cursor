@@ -23,12 +23,48 @@ public class RSIStrategy extends BaseStrategy {
     
     @Override
     public void initialize(Map<String, Object> parameters) {
+        // Only set defaults if not already present
+        if (!parameters.containsKey("period")) {
+            parameters.put("period", 14);
+        }
+        if (!parameters.containsKey("overboughtThreshold")) {
+            parameters.put("overboughtThreshold", 70.0);
+        }
+        if (!parameters.containsKey("oversoldThreshold")) {
+            parameters.put("oversoldThreshold", 30.0); // Default values
+        }
         super.initialize(parameters);
         prices.clear();
         rsi = 50.0;
         currentPrice = 0.0;
     }
-    
+
+    @Override
+    public void configure(Scanner scanner) {
+        System.out.println("\nConfiguring " + getName() + " Strategy");
+        System.out.print("Enter RSI period (default: " + parameters.get("period") + "): ");
+        String input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("period", Integer.parseInt(input));
+        }
+        
+        System.out.print("Enter oversold threshold (default: " + parameters.get("oversoldThreshold") + "): ");
+        input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("oversoldThreshold", Double.parseDouble(input));
+        }
+        
+        System.out.print("Enter overbought threshold (default: " + parameters.get("overboughtThreshold") + "): ");
+        input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("overboughtThreshold", Double.parseDouble(input));
+        }
+        
+        System.out.println("Strategy configured: Period = " + parameters.get("period") + 
+                        ", Oversold = " + parameters.get("oversoldThreshold") + 
+                        ", Overbought = " + parameters.get("overboughtThreshold"));
+    }
+
     @Override
     public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
         currentPrice = marketData.getClose();
@@ -103,10 +139,6 @@ public class RSIStrategy extends BaseStrategy {
     @Override
     protected boolean extraValidations() {
         // Check for both overboughtThreshold and oversoldThreshold.
-        if (!parameters.containsKey("overboughtThreshold") || !parameters.containsKey("oversoldThreshold")) {
-            System.out.println("Missing required parameters for RSIStrategy: overboughtThreshold and oversoldThreshold");
-            return false;
-        }
         Object overboughtObj = parameters.get("overboughtThreshold");
         Object oversoldObj = parameters.get("oversoldThreshold");
         if (!(overboughtObj instanceof Number) || !(oversoldObj instanceof Number)) {

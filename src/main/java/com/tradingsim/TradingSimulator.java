@@ -53,6 +53,10 @@ public class TradingSimulator {
         equityCurve.add(currentEquity);
     }
 
+    private void updateDateCurve(List<LocalDate> dateCurve, LocalDate currentDate) {
+        dateCurve.add(currentDate);
+    }
+
     public SimulationResult runSimulation(TradingStrategy strategy, String symbol) {
         List<MarketData> symbolData = marketDataLoader.getMarketData(symbol);
         if (symbolData == null || symbolData.isEmpty()) {
@@ -62,6 +66,7 @@ public class TradingSimulator {
 
         List<Order> executedOrders = new ArrayList<>();
         List<Double> equityCurve = new ArrayList<>();
+        List<LocalDate> dateCurve = new ArrayList<>();
         double currentCapital = initialCapital;
         Position currentPosition = null;
 
@@ -131,9 +136,32 @@ public class TradingSimulator {
             double currentEquity = currentCapital + positionValue;
             // Use the updateEquityCurve method to record the equity value
             updateEquityCurve(equityCurve, currentEquity);
+            updateDateCurve(dateCurve, currentDate);
         }
 
-        return new SimulationResult(executedOrders, equityCurve, initialCapital);
+        return new SimulationResult(executedOrders, equityCurve, dateCurve, initialCapital);
+    }
+
+    public void exportEquityCurve(SimulationResult result, String symbol) throws IOException {
+        Path resultsPath = Paths.get(RESULTS_DIR);
+        if (!Files.exists(resultsPath)) {
+            Files.createDirectories(resultsPath);
+        }
+
+        String timestamp = LocalDate.now().format(DATE_FORMATTER);
+        String filename = String.format("%s_equity_curve_%s.csv", symbol, timestamp);
+        Path outputFile = resultsPath.resolve(filename);
+
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(outputFile))) {
+            List<Double> equityCurve = result.getEquityCurve();
+            List<LocalDate> dates = result.getDates();
+            writer.println("Date,Equity");
+            for (int i = 0; i < dates.size(); i++) {
+                writer.printf("%s,%.2f%n", dates.get(i), equityCurve.get(i));
+            }
+        }
+        
+        System.out.println("Equity curve exported to: " + outputFile);
     }
     
     public void exportResults(SimulationResult result, String symbol) throws IOException {
@@ -153,16 +181,18 @@ public class TradingSimulator {
             // Write trades
             List<Order> orders = result.getExecutedOrders();
             List<Double> equityCurve = result.getEquityCurve();
+            List<LocalDate> dates = result.getDates();
+            
+            LOGGER.info("Equity Curve length: " + equityCurve.size() + " Dates length: " + dates.size());
+
             for (int i = 0; i < orders.size(); i++) {
                 Order order = orders.get(i);
                 double equity = i < equityCurve.size() ? equityCurve.get(i) : equityCurve.get(equityCurve.size() - 1);
-                
-                writer.printf("%s,%s,%.2f,%.2f,%.2f%n",
+                writer.printf("%s,%s,%.2f,%.2f%n",
                     order.getExecutionDate(),
                     order.getSide(),
                     order.getExecutionPrice(),
-                    order.getProfitLoss(),
-                    equity
+                    order.getProfitLoss()
                 );
             }
         }
@@ -195,12 +225,12 @@ public class TradingSimulator {
             int strategyIndex = Integer.parseInt(scanner.nextLine()) - 1;
             TradingStrategy strategy = simulator.strategies.get(strategyIndex);
             
-            // Configure strategy parametersdisplay
-            Map<String, Object> parameters = new HashMap<>();
-            System.out.println("\nEnter strategy parameters:");
             // Add parameter configuration based on strategy type
-            strategy.initialize(parameters);
+            strategy.initialize(new HashMap<>());
             
+            // Configure strategy
+            strategy.configure(scanner);
+
             // Run simulation
             System.out.println("\nRunning simulation...");
             SimulationResult result = simulator.runSimulation(strategy, symbol);
@@ -215,7 +245,7 @@ public class TradingSimulator {
             
             // Export results
             simulator.exportResults(result, symbol);
-            
+            simulator.exportEquityCurve(result, symbol);
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();

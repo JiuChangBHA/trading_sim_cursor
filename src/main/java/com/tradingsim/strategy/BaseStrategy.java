@@ -2,6 +2,8 @@ package com.tradingsim.strategy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
+
 import com.tradingsim.model.Order;
 
 /**
@@ -27,6 +29,11 @@ public abstract class BaseStrategy implements TradingStrategy {
     public int getMinIndex() {
         // Default implementation - override in specific strategies if needed
         return 0;
+    }
+    
+    @Override
+    public void configure(Scanner scanner) {
+        // Default implementation - override in specific strategies if needed
     }
     
     /**

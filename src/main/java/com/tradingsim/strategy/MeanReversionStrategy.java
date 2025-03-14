@@ -25,6 +25,13 @@ public class MeanReversionStrategy extends BaseStrategy {
     
     @Override
     public void initialize(Map<String, Object> parameters) {
+        // Only set defaults if not already present
+        if (!parameters.containsKey("period")) {
+            parameters.put("period", 20);
+        }
+        if (!parameters.containsKey("threshold")) {
+            parameters.put("threshold", 2.0); // Default values
+        }
         super.initialize(parameters);
         prices.clear();
         mean = 0.0;
@@ -32,7 +39,25 @@ public class MeanReversionStrategy extends BaseStrategy {
         zScore = 0.0;
         currentPrice = 0.0;
     }
-    
+    @Override
+    public void configure(Scanner scanner) {
+        System.out.println("\nConfiguring " + getName() + " Strategy");
+        System.out.print("Enter lookback period (default: " + parameters.get("period") + "): ");
+        String input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("period", Integer.parseInt(input));
+        }
+        
+        System.out.print("Enter z-score threshold (default: " + parameters.get("threshold") + "): ");
+        input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("threshold", Double.parseDouble(input));
+        }
+        
+        System.out.println("Strategy configured: Period = " + parameters.get("period") + 
+                        ", Threshold = " + parameters.get("threshold"));
+    }
+
     @Override
     public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
         currentPrice = marketData.getClose();
@@ -104,10 +129,6 @@ public class MeanReversionStrategy extends BaseStrategy {
     @Override
     protected boolean extraValidations() {
         // Check for 'threshold' parameter specific to MeanReversionStrategy.
-        if (!parameters.containsKey("threshold")) {
-            System.out.println("Missing required parameter: threshold (for MeanReversionStrategy)");
-            return false;
-        }
         Object thresholdObj = parameters.get("threshold");
         if (!(thresholdObj instanceof Number)) {
             System.out.println("Parameter 'threshold' must be a number.");

@@ -1,5 +1,6 @@
 package com.tradingsim;
 
+import java.time.LocalDate;
 import java.util.List;
 import com.tradingsim.model.Order;
 
@@ -9,11 +10,13 @@ import com.tradingsim.model.Order;
 public class SimulationResult {
     private final List<Order> executedOrders;
     private final List<Double> equityCurve;
+    private final List<LocalDate> dates;
     private final double initialCapital;
 
-    public SimulationResult(List<Order> executedOrders, List<Double> equityCurve, double initialCapital) {
+    public SimulationResult(List<Order> executedOrders, List<Double> equityCurve, List<LocalDate> dates, double initialCapital) {
         this.executedOrders = executedOrders;
         this.equityCurve = equityCurve;
+        this.dates = dates;
         this.initialCapital = initialCapital;
     }
 
@@ -23,6 +26,10 @@ public class SimulationResult {
 
     public List<Double> getEquityCurve() {
         return equityCurve;
+    }
+
+    public List<LocalDate> getDates() {
+        return dates;
     }
 
     public double getInitialCapital() {

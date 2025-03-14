@@ -37,9 +37,16 @@ public class BollingerBandsStrategy extends BaseStrategy {
         return "Generates signals when price touches or crosses Bollinger Bands";
     }
     
-    @Override
     public void initialize(Map<String, Object> parameters) {
+        // Only set defaults if not already present
+        if (!parameters.containsKey("period")) {
+            parameters.put("period", 20);
+        }
+        if (!parameters.containsKey("stdDevMultiplier")) {
+            parameters.put("stdDevMultiplier", 2.0);
+        }
         super.initialize(parameters);
+        // Rest of your initialization
         prices.clear();
         sma = 0.0;
         upperBand = 0.0;
@@ -47,6 +54,24 @@ public class BollingerBandsStrategy extends BaseStrategy {
         currentPrice = 0.0;
     }
     
+    @Override
+    public void configure(Scanner scanner) {
+        System.out.println("\nConfiguring " + getName() + " Strategy");
+        System.out.print("Enter period (default: " + parameters.get("period") + "): ");
+        String input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("period", Integer.parseInt(input));
+        }
+        
+        System.out.print("Enter standard deviation multiplier (default: " + parameters.get("stdDevMultiplier") + "): ");
+        input = scanner.nextLine();
+        if (!input.trim().isEmpty()) {
+            parameters.put("stdDevMultiplier", Double.parseDouble(input));
+        }
+        
+        System.out.println("Strategy configured: Period = " + parameters.get("period") + 
+                        ", StdDev Multiplier = " + parameters.get("stdDevMultiplier"));
+    }
     @Override
     public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
         currentPrice = marketData.getClose();
@@ -115,10 +140,6 @@ public class BollingerBandsStrategy extends BaseStrategy {
     @Override
     protected boolean extraValidations() {
         // For BollingerBandsStrategy, we require a stdMultiplier parameter.
-        if (!parameters.containsKey("stdDevMultiplier")) {
-            System.out.println("Missing required parameter: stdDevMultiplier (for BollingerBandsStrategy)");
-            return false;
-        }
         Object multiplierObj = parameters.get("stdDevMultiplier");
         if (!(multiplierObj instanceof Number)) {
             System.out.println("Parameter 'stdDevMultiplier' must be numeric.");

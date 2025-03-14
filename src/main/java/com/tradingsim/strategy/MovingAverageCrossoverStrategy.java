@@ -29,6 +29,13 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
     
     @Override
     public void initialize(Map<String, Object> parameters) {
+        // Only set defaults if not already present
+        if (!parameters.containsKey("fastPeriod")) {
+            parameters.put("fastPeriod", 10);
+        }
+        if (!parameters.containsKey("slowPeriod")) {
+            parameters.put("slowPeriod", 30);
+        }
         super.initialize(parameters);
         prices.clear();
         fastMA = 0.0;
@@ -37,7 +44,24 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
         fastAboveSlow = false;
         initialized = false;
     }
-    
+
+    @Override
+    public void configure(Scanner scanner) {
+        System.out.print("Enter fast period (default " + parameters.get("fastPeriod") + "): ");
+        String input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
+            parameters.put("fastPeriod", Integer.parseInt(input));
+        }
+        
+        System.out.print("Enter slow period (default " + parameters.get("slowPeriod") + "): ");
+        input = scanner.nextLine().trim();
+        if (!input.isEmpty()) {
+            parameters.put("slowPeriod", Integer.parseInt(input));
+        }
+        
+        System.out.println("Strategy configured: Fast MA = " + parameters.get("fastPeriod") + ", Slow MA = " + parameters.get("slowPeriod"));
+    }
+
     @Override
     public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
         currentPrice = marketData.getClose();
@@ -112,10 +136,6 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
     @Override
     protected boolean extraValidations() {
         // Check that fastPeriod and slowPeriod are provided and are valid integers.
-        if (!parameters.containsKey("fastPeriod") || !parameters.containsKey("slowPeriod")) {
-            System.out.println("Missing required parameters for MovingAverageCrossoverStrategy: fastPeriod and slowPeriod");
-            return false;
-        }
         Object fastObj = parameters.get("fastPeriod");
         Object slowObj = parameters.get("slowPeriod");
         if (!(fastObj instanceof Number) || !(slowObj instanceof Number)) {
