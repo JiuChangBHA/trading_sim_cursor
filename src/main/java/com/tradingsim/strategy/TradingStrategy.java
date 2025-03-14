@@ -1,7 +1,5 @@
 package com.tradingsim.strategy;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import com.tradingsim.model.MarketData;
 import com.tradingsim.model.Order;

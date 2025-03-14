@@ -153,17 +153,43 @@ public class TradingSimulator {
             // Write trades
             List<Order> orders = result.getExecutedOrders();
             List<Double> equityCurve = result.getEquityCurve();
-            for (int i = 0; i < orders.size(); i++) {
-                Order order = orders.get(i);
-                double equity = i < equityCurve.size() ? equityCurve.get(i) : equityCurve.get(equityCurve.size() - 1);
+            
+            // Create a map of dates to equity values for all data points
+            Map<LocalDate, Double> dateToEquity = new HashMap<>();
+            List<MarketData> marketData = MarketDataLoader.getInstance().getMarketData(symbol);
+            
+            // Initialize with initial capital
+            if (!marketData.isEmpty()) {
+                for (int i = 0; i < marketData.size(); i++) {
+                    LocalDate date = marketData.get(i).getDate();
+                    double equity = i < equityCurve.size() ? equityCurve.get(i) : initialCapital;
+                    dateToEquity.put(date, equity);
+                }
+            }
+            
+            // Write all equity curve data points
+            for (int i = 0; i < marketData.size(); i++) {
+                LocalDate date = marketData.get(i).getDate();
+                double equity = i < equityCurve.size() ? equityCurve.get(i) : initialCapital;
                 
-                writer.printf("%s,%s,%.2f,%.2f,%.2f%n",
-                    order.getExecutionDate(),
-                    order.getSide(),
-                    order.getExecutionPrice(),
-                    order.getProfitLoss(),
-                    equity
-                );
+                // Find if there's an order on this date
+                Optional<Order> orderOnDate = orders.stream()
+                    .filter(o -> o.getExecutionDate() != null && o.getExecutionDate().equals(date))
+                    .findFirst();
+                
+                if (orderOnDate.isPresent()) {
+                    Order order = orderOnDate.get();
+                    writer.printf("%s,%s,%.2f,%.2f,%.2f%n",
+                        date,
+                        order.getSide(),
+                        order.getExecutionPrice(),
+                        order.getProfitLoss(),
+                        equity
+                    );
+                } else {
+                    // Write just the date and equity if no order on this date
+                    writer.printf("%s,NONE,0.00,0.00,%.2f%n", date, equity);
+                }
             }
         }
         

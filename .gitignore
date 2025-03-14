@@ -50,5 +50,8 @@ Thumbs.db
 # Project specific
 src/main/resources/simulation_results/*
 src/main/resources/market_data/*
-
+src/main/resources/optimization_reports/*
 src/test/log/*
+
+
+.venv/
