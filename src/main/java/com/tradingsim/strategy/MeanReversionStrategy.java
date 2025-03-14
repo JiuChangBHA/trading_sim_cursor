@@ -43,9 +43,9 @@ public class MeanReversionStrategy extends BaseStrategy {
         
         // Get parameters (default values if not specified)
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 20;
+                    (int) getIntegerParameter("period") : 20;
         double threshold = parameters.containsKey("threshold") ? 
-                          (double) parameters.get("threshold") : 2.0;
+                          (double) getDoubleParameter("threshold") : 2.0;
         
         // Need at least period prices
         if (prices.size() <= period) {
@@ -97,27 +97,28 @@ public class MeanReversionStrategy extends BaseStrategy {
     @Override
     public int getMinIndex() {
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 20;
+                    (int) getIntegerParameter("period") : 20;
         return period;
     }
 
     @Override
-    public boolean isValidParameters() {
-        boolean validPeriod = true;
-        boolean validThreshold = true;
-        if (parameters.containsKey("period")) {
-            if (!(parameters.get("period") instanceof Integer)) {   
-                return false;
-            }
-            validPeriod = (int) parameters.get("period") > 0;
-        } 
-        if (parameters.containsKey("threshold")) {
-            if (!(parameters.get("threshold") instanceof Double) && !(parameters.get("threshold") instanceof Integer)) {
-                return false;
-            }
-            validThreshold = (double) parameters.get("threshold") > 0;
+    protected boolean extraValidations() {
+        // Check for 'threshold' parameter specific to MeanReversionStrategy.
+        if (!parameters.containsKey("threshold")) {
+            System.out.println("Missing required parameter: threshold (for MeanReversionStrategy)");
+            return false;
         }
-        return validPeriod && validThreshold;
+        Object thresholdObj = parameters.get("threshold");
+        if (!(thresholdObj instanceof Number)) {
+            System.out.println("Parameter 'threshold' must be a number.");
+            return false;
+        }
+        double threshold = ((Number) thresholdObj).doubleValue();
+        if (threshold <= 0) {
+            System.out.println("Parameter 'threshold' must be greater than 0.");
+            return false;
+        }
+        return true;
     }
     
     @Override

@@ -53,9 +53,54 @@ public abstract class BaseStrategy implements TradingStrategy {
      * Check if the parameters are valid
      * @return true if the parameters are valid, false otherwise
      */
-    public boolean isValidParameters() {
+
+     @Override
+     public boolean isValidParameters() {
+        // Common validations:
+        if (parameters == null || parameters.isEmpty()) {
+            System.out.println("Parameters map is null or empty.");
+            return false;
+        }
+        if (parameters.containsKey("period")) {
+            Object periodObj = getIntegerParameter("period");
+            int period = (Integer) periodObj;
+                if (period <= 0) {
+                    System.out.println("Parameter 'period' must be greater than 0.");
+                    return false;
+                }
+            }
+        
+        // Call subclass-specific validations.
+        return extraValidations();
+    }
+
+    /**
+     * Subclasses can override this method to add their own parameter validations.
+     */
+    protected boolean extraValidations() {
         return true;
     }
+
+    protected int getIntegerParameter(String key) {
+        Object value = parameters.get(key);
+        if (value instanceof Integer) {
+            return (Integer) value;
+        } else if (value instanceof Number) {
+            return (int) Math.floor(((Number) value).doubleValue());
+        }
+        throw new IllegalArgumentException("Parameter '" + key + "' must be an Integer or a Number.");
+    }
+
+    protected double getDoubleParameter(String key) {
+        Object value = parameters.get(key);
+        if (value instanceof Double) {
+            return (Double) value;
+        } else if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        throw new IllegalArgumentException("Parameter '" + key + "' must be a Double or a Number.");
+    }
+    
 
     @Override
     public TradingStrategy duplicate() {

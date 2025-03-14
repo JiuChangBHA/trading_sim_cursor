@@ -34,7 +34,6 @@ public class StrategyOptimizer {
         // Clear previous results
         results.clear();
         List<Map<String, Object>> parameterCombinations = generateParameterCombinations(strategy);
-        // LOGGER.info("Starting optimization with " + parameterCombinations.size() + " parameter combinations");
 
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         List<Future<OptimizationResult>> futures = new ArrayList<>();
@@ -93,6 +92,7 @@ public class StrategyOptimizer {
 
     private void generateCombinationsRecursive(Map<String, Object> current, List<String> paramNames, 
                                              int index, List<Map<String, Object>> combinations, TradingStrategy strategy) {
+
         if (index == paramNames.size()) {
             strategy.initialize(current);
             if (strategy.isValidParameters()) {

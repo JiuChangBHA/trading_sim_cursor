@@ -10,8 +10,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import com.tradingsim.model.MarketData;
 import com.tradingsim.strategy.*;
+import java.util.logging.Logger;
 
 public class StrategyOptimizationReportTest {
+    private static final Logger LOGGER = Logger.getLogger(StrategyOptimizationReportTest.class.getName());
     private static final double INITIAL_CAPITAL = 100000.0;
     private MarketDataLoader marketDataLoader;
     private static List<String> SYMBOLS = new ArrayList<>();
@@ -62,21 +64,21 @@ public class StrategyOptimizationReportTest {
             // Create strategy-specific report file
             String timestamp = LocalDate.now().format(DATE_FORMATTER);
             Path reportFile = Paths.get(REPORTS_DIR, strategyName + "_optimization_" + timestamp + ".csv");
-            
+
             try (var writer = Files.newBufferedWriter(reportFile)) {
                 // Write header
                 writer.write("Symbol,Parameters,Sharpe Ratio,Max Drawdown,Win Rate,Total Trades,Profit Loss\n");
-                
+
                 for (String symbol : marketDataLoader.getSymbols()) {
-                    System.out.println("Processing " + symbol + "...");
+                    // System.out.println("Processing " + symbol + "...");
                     StrategyOptimizer optimizer = optimizers.get(symbol);
-                    
+
                     // Set parameter ranges based on strategy type
                     setStrategyParameters(optimizer, strategy);
                     
                     // Run optimization
                     List<OptimizationResult> results = optimizer.optimize(strategy);
-                    
+                    // LOGGER.info("results size: " + results.size());                
                     if (!results.isEmpty()) {
                         // Get best result
                         OptimizationResult best = results.get(0);

@@ -48,9 +48,9 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
         
         // Get parameters (default values if not specified)
         int fastPeriod = parameters.containsKey("fastPeriod") ? 
-                        (int) parameters.get("fastPeriod") : 10;
+                        (int) getIntegerParameter("fastPeriod") : 10;
         int slowPeriod = parameters.containsKey("slowPeriod") ? 
-                        (int) parameters.get("slowPeriod") : 30;
+                        (int) getIntegerParameter("slowPeriod") : 30;
         
         // Need at least slowPeriod prices
         if (prices.size() < slowPeriod) {
@@ -105,19 +105,33 @@ public class MovingAverageCrossoverStrategy extends BaseStrategy {
     @Override
     public int getMinIndex() {
         int slowPeriod = parameters.containsKey("slowPeriod") ? 
-                        (int) parameters.get("slowPeriod") : 30;
+                        (int) getIntegerParameter("slowPeriod") : 30;
         return slowPeriod;
     }
 
     @Override
-    public boolean isValidParameters() {
+    protected boolean extraValidations() {
+        // Check that fastPeriod and slowPeriod are provided and are valid integers.
         if (!parameters.containsKey("fastPeriod") || !parameters.containsKey("slowPeriod")) {
-            return true;
-        }
-        if (!(parameters.get("fastPeriod") instanceof Integer) || !(parameters.get("slowPeriod") instanceof Integer)) {
+            System.out.println("Missing required parameters for MovingAverageCrossoverStrategy: fastPeriod and slowPeriod");
             return false;
         }
-        return (int) parameters.get("fastPeriod") < (int) parameters.get("slowPeriod");
+        Object fastObj = parameters.get("fastPeriod");
+        Object slowObj = parameters.get("slowPeriod");
+        if (!(fastObj instanceof Number) || !(slowObj instanceof Number)) {
+            System.out.println("Parameters 'fastPeriod' and 'slowPeriod' must be numbers.");
+            return false;
+        }
+        double fastPeriod = ((Number) fastObj).doubleValue();
+        double slowPeriod = ((Number) slowObj).doubleValue();
+        if (fastPeriod <= 0 || slowPeriod <= 0) {
+            System.out.println("fastPeriod and slowPeriod must be greater than 0.");
+            return false;
+        }
+        if (fastPeriod >= slowPeriod) {
+            return false;
+        }
+        return true;
     }
     
     @Override

@@ -39,11 +39,11 @@ public class RSIStrategy extends BaseStrategy {
         
         // Get parameters (default values if not specified)
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 14;
+                    (int) getIntegerParameter("period") : 14;
         double overboughtThreshold = parameters.containsKey("overboughtThreshold") ? 
-                                    (double) parameters.get("overboughtThreshold") : 70.0;
+                                    (double) getDoubleParameter("overboughtThreshold") : 70.0;
         double oversoldThreshold = parameters.containsKey("oversoldThreshold") ? 
-                                  (double) parameters.get("oversoldThreshold") : 30.0;
+                                  (double) getDoubleParameter("oversoldThreshold") : 30.0;
         
         // Need at least period+1 prices to calculate RSI
         if (prices.size() <= period) {
@@ -96,42 +96,30 @@ public class RSIStrategy extends BaseStrategy {
     @Override
     public int getMinIndex() {
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 14;
+                    (int) getIntegerParameter("period") : 14;
         return period + 1;
     }
 
     @Override
-    public boolean isValidParameters() {
-        boolean validPeriod = true;
-        boolean validOverboughtThreshold = true;
-        boolean validOversoldThreshold = true;
-        if (parameters.containsKey("period")) {
-            if (!(parameters.get("period") instanceof Integer)) {
-                return false;
-            }
-            validPeriod = (int) parameters.get("period") > 0;
-        } 
-        if (parameters.containsKey("overboughtThreshold")) {
-            if (!(parameters.get("overboughtThreshold") instanceof Double) && !(parameters.get("overboughtThreshold") instanceof Integer)) {
-                return false;
-            }
-            validOverboughtThreshold = (double) parameters.get("overboughtThreshold") > 0;
+    protected boolean extraValidations() {
+        // Check for both overboughtThreshold and oversoldThreshold.
+        if (!parameters.containsKey("overboughtThreshold") || !parameters.containsKey("oversoldThreshold")) {
+            System.out.println("Missing required parameters for RSIStrategy: overboughtThreshold and oversoldThreshold");
+            return false;
         }
-        if (parameters.containsKey("oversoldThreshold")) {
-            if (!(parameters.get("oversoldThreshold") instanceof Double) && !(parameters.get("oversoldThreshold") instanceof Integer)) {
-                return false;
-            }
-            validOversoldThreshold = (double) parameters.get("oversoldThreshold") > 0;
+        Object overboughtObj = parameters.get("overboughtThreshold");
+        Object oversoldObj = parameters.get("oversoldThreshold");
+        if (!(overboughtObj instanceof Number) || !(oversoldObj instanceof Number)) {
+            System.out.println("RSI parameters must be numeric.");
+            return false;
         }
-        // if none of the check that the overbought threshold is less than the oversold threshold. if any is not given, it is set to 70 and 30 respectively.
-        if (validOverboughtThreshold && validOversoldThreshold) {
-            double overboughtThreshold = parameters.containsKey("overboughtThreshold") ? 
-            (double) parameters.get("overboughtThreshold") : 70.0;
-            double oversoldThreshold = parameters.containsKey("oversoldThreshold") ? 
-            (double) parameters.get("oversoldThreshold") : 30.0;
-            return validPeriod && (overboughtThreshold < oversoldThreshold);
+        double overbought = ((Number) overboughtObj).doubleValue();
+        double oversold = ((Number) oversoldObj).doubleValue();
+        if (overbought <= oversold) {
+            System.out.println("Overbought threshold must be greater than oversold threshold.");
+            return false;
         }
-        return false;
+        return true;
     }
     
     @Override

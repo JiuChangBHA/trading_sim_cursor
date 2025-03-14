@@ -141,7 +141,6 @@ public class MarketDataLoader {
             .filter(Files::isDirectory)
             .map(p -> p.getFileName().toString())
             .collect(Collectors.toList());
-        System.out.println("Symbols: " + symbols);
         loadMarketData(symbols);
     }
     

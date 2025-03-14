@@ -57,9 +57,9 @@ public class BollingerBandsStrategy extends BaseStrategy {
         
         // Get parameters (default values if not specified)
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 20;
+                    (int) getIntegerParameter("period") : 20;
         double stdDevMultiplier = parameters.containsKey("stdDevMultiplier") ? 
-                                 (double) parameters.get("stdDevMultiplier") : 2.0;
+                                 (double) getDoubleParameter("stdDevMultiplier") : 2.0;
         
         // Need at least period prices
         if (prices.size() < period) {
@@ -108,28 +108,28 @@ public class BollingerBandsStrategy extends BaseStrategy {
     @Override
     public int getMinIndex() {
         int period = parameters.containsKey("period") ? 
-                    (int) parameters.get("period") : 20;
+                    (int) getIntegerParameter("period") : 20;
         return period;
     }
 
     @Override
-    public boolean isValidParameters() {
-        boolean validPeriod = false;
-        boolean validStdDevMultiplier = false;
-
-        if (parameters.containsKey("period")) {
-            if (!(parameters.get("period") instanceof Integer)) {
-                return false;
-            }
-            validPeriod = (int) parameters.get("period") > 0;
+    protected boolean extraValidations() {
+        // For BollingerBandsStrategy, we require a stdMultiplier parameter.
+        if (!parameters.containsKey("stdDevMultiplier")) {
+            System.out.println("Missing required parameter: stdDevMultiplier (for BollingerBandsStrategy)");
+            return false;
         }
-        if (parameters.containsKey("stdDevMultiplier")) {
-            if (!(parameters.get("stdDevMultiplier") instanceof Double) && !(parameters.get("stdDevMultiplier") instanceof Integer)) {
-                return false;
-            }
-            validStdDevMultiplier = (double) parameters.get("stdDevMultiplier") > 0;
+        Object multiplierObj = parameters.get("stdDevMultiplier");
+        if (!(multiplierObj instanceof Number)) {
+            System.out.println("Parameter 'stdDevMultiplier' must be numeric.");
+            return false;
         }
-        return validPeriod && validStdDevMultiplier;
+        double stdDevMultiplier = ((Number) multiplierObj).doubleValue();
+        if (stdDevMultiplier <= 0) {
+            System.out.println("Parameter 'stdDevMultiplier' must be greater than 0.");
+            return false;
+        }
+        return true;
     }
     
     @Override
