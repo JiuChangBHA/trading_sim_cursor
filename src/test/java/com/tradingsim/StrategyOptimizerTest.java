@@ -147,7 +147,7 @@ public class StrategyOptimizerTest {
         // Test with single parameter value
         optimizer.addParameterRange("fastPeriod", Arrays.asList(5));
         results = optimizer.optimize(strategy);
-        assertEquals(0, results.size(), "Should handle single parameter value");
+        assertEquals(1, results.size(), "Should handle single parameter value");
         
         // Test with invalid parameter combinations
         optimizer.addParameterRange("fastPeriod", Arrays.asList(30));

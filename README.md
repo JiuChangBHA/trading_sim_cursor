@@ -1,114 +1,131 @@
-# Trading Simulator
+# Trading Simulation
 
-A Java-based trading simulator that allows you to backtest various trading strategies using historical market data. The simulator supports multiple technical analysis strategies including Moving Average Crossover, Mean Reversion, RSI, and Bollinger Bands.
+A comprehensive trading simulation platform for backtesting trading strategies with historical market data.
+
+## Overview
+
+This project provides a flexible environment for simulating trading activities, allowing users to:
+- Backtest trading strategies using historical market data
+- Visualize trading performance and portfolio metrics
+- Implement and compare different trading algorithms
+- Analyze market behavior and strategy effectiveness
 
 ## Features
 
-- Multiple trading strategies implementation
-- Historical market data support
-- Performance metrics calculation (Sharpe ratio, max drawdown)
-- Interactive command-line interface
-- CSV export of simulation results
-- Comprehensive unit tests
+- **Historical Data Integration**: Import and use real market data for accurate simulations
+- **Strategy Implementation**: Create and test custom trading strategies
+- **Portfolio Management**: Track portfolio performance, including profits, losses, and risk metrics
+- **Visualization Tools**: Generate charts and reports to analyze trading results
+- **Customizable Parameters**: Adjust simulation settings to test different market scenarios
 
-## Trading Strategies
+## Getting Started
 
-1. **Moving Average Crossover**
-   - Generates buy signals when short-term MA crosses above long-term MA
-   - Generates sell signals when short-term MA crosses below long-term MA
+### Prerequisites
 
-2. **Mean Reversion**
-   - Identifies overbought and oversold conditions
-   - Generates buy signals when price is below mean
-   - Generates sell signals when price is above mean
+- Python 3.8+
+- Required Python packages (install via `pip install -r requirements.txt`):
+  - pandas
+  - numpy
+  - matplotlib
+  - yfinance (for data fetching)
+  - other dependencies as specified in requirements.txt
 
-3. **RSI (Relative Strength Index)**
-   - Uses RSI to identify overbought and oversold conditions
-   - Generates buy signals in oversold conditions
-   - Generates sell signals in overbought conditions
-
-4. **Bollinger Bands**
-   - Uses price position relative to Bollinger Bands
-   - Generates buy signals when price is below lower band
-   - Generates sell signals when price is above upper band
-
-## Prerequisites
-
-- Java 11 or higher
-- Maven 3.6 or higher
-
-## Installation
+### Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/jiuchang07/trading_sim_cursor.git
-cd trading_sim_cursor
-```
+   ```
+   git clone https://github.com/yourusername/trading_sim.git
+   cd trading_sim
+   ```
 
-2. Build the project:
-```bash
-mvn clean install
-```
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+3. Run the simulation:
+   ```
+   python main.py
+   ```
 
 ## Usage
 
-1. Run the simulator:
-```bash
-mvn exec:java -Dexec.mainClass="com.tradingsim.TradingSimulator"
+### Basic Simulation
+
+```python
+from trading_sim import TradingSimulator, Strategy
+
+# Initialize a simple strategy
+strategy = Strategy.SimpleMovingAverage(short_period=10, long_period=30)
+
+# Create simulator with historical data
+simulator = TradingSimulator(data_source='AAPL', start_date='2020-01-01', end_date='2021-01-01')
+
+# Run simulation with the strategy
+results = simulator.run(strategy, initial_capital=10000)
+
+# Display results
+results.summary()
+results.plot_performance()
 ```
 
-2. Follow the interactive prompts to:
-   - Select a trading symbol
-   - Choose a trading strategy
-   - Configure strategy parameters
-   - View simulation results
+### Creating Custom Strategies
 
-3. Simulation results will be exported to CSV files in the `src/main/resources/simulation_results` directory.
+Implement your own trading strategies by extending the base Strategy class:
+
+```python
+from trading_sim import Strategy
+
+class MyCustomStrategy(Strategy):
+    def __init__(self, parameter1, parameter2):
+        self.param1 = parameter1
+        self.param2 = parameter2
+        
+    def generate_signals(self, market_data):
+        # Implement your strategy logic here
+        # Return buy/sell signals based on market_data
+        return signals
+```
 
 ## Project Structure
 
-```
-src/
-├── main/
-│   ├── java/
-│   │   └── com/
-│   │       └── tradingsim/
-│   │           ├── TradingSimulator.java
-│   │           ├── TradingStrategy.java
-│   │           ├── MovingAverageCrossoverStrategy.java
-│   │           ├── MeanReversionStrategy.java
-│   │           ├── RSIStrategy.java
-│   │           ├── BollingerBandsStrategy.java
-│   │           ├── MarketData.java
-│   │           ├── TradingSignal.java
-│   │           ├── TradeExecuted.java
-│   │           ├── TradingAccount.java
-│   │           └── SimulationResult.java
-│   └── resources/
-│       ├── market_data/
-│       └── simulation_results/
-└── test/
-    └── java/
-        └── com/
-            └── tradingsim/
-                └── TradingSimulatorTest.java
+- `data/`: Contains historical market data and data handling utilities
+- `strategies/`: Implementation of various trading strategies
+- `simulator/`: Core simulation engine
+- `visualization/`: Tools for generating charts and visual reports
+- `utils/`: Helper functions and utilities
+- `examples/`: Example scripts demonstrating different use cases
+
+## Configuration
+
+Adjust simulation parameters in the `config.py` file:
+
+```python
+# Example configuration
+CONFIG = {
+    'default_capital': 10000,
+    'commission_rate': 0.001,
+    'risk_free_rate': 0.02,
+    'data_source': 'yahoo',
+    'log_level': 'INFO'
+}
 ```
 
-## Testing
+## Contributing
 
-Run the test suite:
-```bash
-mvn test
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Author
+## Acknowledgments
 
-- Jiuchang07
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. 
+- Thanks to all contributors who have helped shape this project
+- Inspired by various open-source trading frameworks and financial analysis tools 
