@@ -58,4 +58,4 @@ src/test/log/*
 
 .venv/
 
-.env
+src/.env
