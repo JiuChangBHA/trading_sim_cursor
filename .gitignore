@@ -57,3 +57,5 @@ src/test/log/*
 
 
 .venv/
+
+.env

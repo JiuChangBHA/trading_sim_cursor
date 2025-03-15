@@ -56,18 +56,19 @@ trading_sim/
 │   │       ├── visualization
 │   │       │   └── trading_visualization.jar
 │   │       └── logging.properties
-│   └── test/
-│       └── java/
-│           └── com/
-│               └── tradingsim/
-│                   ├── TradingSimulatorTest.java
-│                   ├── StrategyOptimization.java
-│                   ├── StrategyOptimizationReportTest.java
-│                   └── strategy/
-│                       ├── MeanReversionStrategyTest.java
-│                       ├── RSIStrategyTest.java
-│                       ├── MovingAverageCrossoverStrategyTest.java
-│                       └── BollingerBandsStrategyTest.java
+│   ├── test/
+│   │   └── java/
+│   │       └── com/
+│   │           └── tradingsim/
+│   │               ├── TradingSimulatorTest.java
+│   │               ├── StrategyOptimization.java
+│   │               ├── StrategyOptimizationReportTest.java
+│   │               └── strategy/
+│   │                   ├── MeanReversionStrategyTest.java
+│   │                   ├── RSIStrategyTest.java
+│   │                   ├── MovingAverageCrossoverStrategyTest.java
+│   │                   └── BollingerBandsStrategyTest.java
+│   └── .env
 ├── pom.xml
 ├── README.md
 └── LICENSE
@@ -85,6 +86,7 @@ trading_sim/
   - numpy
   - matplotlib
   - yfinance (for data fetching)
+- API Keys (`src/.env`)
 
 ### Installation
 
