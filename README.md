@@ -1,34 +1,38 @@
-# Trading Simulation
+# Trading Simulation Platform
 
-A comprehensive trading simulation platform for backtesting trading strategies with historical market data.
+A comprehensive Java-based trading simulation platform for backtesting and optimizing trading strategies with historical market data.
 
 ## Overview
 
-This project provides a flexible environment for simulating trading activities, allowing users to:
+This project provides a robust environment for simulating trading activities and optimizing strategy parameters, allowing users to:
 - Backtest trading strategies using historical market data
+- Optimize strategy parameters to maximize performance metrics
 - Visualize trading performance and portfolio metrics
-- Implement and compare different trading algorithms
 - Analyze market behavior and strategy effectiveness
 
-## Features
+## Project Structure
 
-- **Historical Data Integration**: Import and use real market data for accurate simulations
-- **Strategy Implementation**: Create and test custom trading strategies
-- **Portfolio Management**: Track portfolio performance, including profits, losses, and risk metrics
-- **Visualization Tools**: Generate charts and reports to analyze trading results
-- **Customizable Parameters**: Adjust simulation settings to test different market scenarios
+- `src/main/java/`: Core Java implementation of the trading simulator and strategies
+- `src/main/python/`: Python scripts for data loading and processing
+- `src/test/java/`: Test classes including strategy optimization tests
+- `resources/`: 
+  - `lib/market_data/`: Directory for storing market data
+  - `optimization_reports/`: Saved optimization results
+  - `simulation_results/`: Saved simulation results
+  - `visualization/`: Scripts for visualizing results
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.8+
-- Required Python packages (install via `pip install -r requirements.txt`):
+- Java JDK 11+
+- Maven
+- Python 3.8+ (for data loading and visualization)
+- Required Python packages:
   - pandas
   - numpy
   - matplotlib
   - yfinance (for data fetching)
-  - other dependencies as specified in requirements.txt
 
 ### Installation
 
@@ -38,78 +42,147 @@ This project provides a flexible environment for simulating trading activities, 
    cd trading_sim
    ```
 
-2. Install dependencies:
+2. Build the project with Maven:
    ```
-   pip install -r requirements.txt
+   mvn clean install
    ```
 
-3. Run the simulation:
+3. Install Python dependencies:
    ```
-   python main.py
+   pip install pandas numpy matplotlib yfinance
    ```
 
 ## Usage
 
-### Basic Simulation
+### Loading Market Data
 
-```python
-from trading_sim import TradingSimulator, Strategy
+Run the Python script to fetch and prepare market data:
 
-# Initialize a simple strategy
-strategy = Strategy.SimpleMovingAverage(short_period=10, long_period=30)
-
-# Create simulator with historical data
-simulator = TradingSimulator(data_source='AAPL', start_date='2020-01-01', end_date='2021-01-01')
-
-# Run simulation with the strategy
-results = simulator.run(strategy, initial_capital=10000)
-
-# Display results
-results.summary()
-results.plot_performance()
+```
+python src/main/python/load_market_data.py
 ```
 
-### Creating Custom Strategies
+This will save the market data to `resources/lib/market_data/` for use in simulations.
 
-Implement your own trading strategies by extending the base Strategy class:
+### Running a Simulation
 
-```python
-from trading_sim import Strategy
+To run a trading simulation with the default parameters:
 
-class MyCustomStrategy(Strategy):
-    def __init__(self, parameter1, parameter2):
-        self.param1 = parameter1
-        self.param2 = parameter2
-        
-    def generate_signals(self, market_data):
-        # Implement your strategy logic here
-        # Return buy/sell signals based on market_data
-        return signals
+```
+mvn exec:java
 ```
 
-## Project Structure
+This command executes the `TradingSimulator.java` main class, which runs the simulation with predefined strategies and parameters. Simulation results will be saved to the `resources/simulation_results/` directory.
 
-- `data/`: Contains historical market data and data handling utilities
-- `strategies/`: Implementation of various trading strategies
-- `simulator/`: Core simulation engine
-- `visualization/`: Tools for generating charts and visual reports
-- `utils/`: Helper functions and utilities
-- `examples/`: Example scripts demonstrating different use cases
+### Strategy Optimization
+
+To optimize strategy parameters:
+
+```
+mvn test -Dtest=StrategyOptimizationReportTest
+```
+
+This runs the optimization test which will:
+1. Test various combinations of strategy parameters defined in `StrategyOptimizationReportTest.java`
+2. Evaluate each parameter set against historical data
+3. Save optimization reports to `resources/optimization_reports/`
+
+You can modify the parameter ranges in `StrategyOptimizationReportTest.java` to customize the optimization process.
+
+### Visualization
+
+To visualize simulation and optimization results:
+
+1. Navigate to the visualization directory:
+   ```
+   cd resources/visualization
+   ```
+
+2. Run the visualization scripts:
+   ```
+   python visualize_simulation.py
+   python visualize_optimization.py
+   ```
+
+These scripts read the saved files from `optimization_reports/` and `simulation_results/` directories and generate visual representations of the results.
+
+## Customizing Strategies
+
+To implement your own trading strategy:
+
+1. Create a new class that extends the base Strategy class
+2. Implement the required methods for signal generation
+3. Register your strategy in the `TradingSimulator.java` file
+4. Run the simulation with your custom strategy
+
+Example:
+```java
+public class MyCustomStrategy extends BaseStrategy {
+    private List<Double> prices = new ArrayList<>();
+    private double currentPrice = 0.0;
+
+    @Override
+    public String getName() {
+        return "My Custom";
+    }
+    
+    @Override
+    public String getDescription() {
+        return "You can create your custom strategies like this";
+    }
+    
+    public void initialize(Map<String, Object> parameters) {
+        // Only set defaults if not already present
+        if (!parameters.containsKey("period")) {
+            parameters.put("period", 20);
+        }
+        super.initialize(parameters);
+        // Rest of your initialization
+        prices.clear();
+        currentPrice = 0.0;
+    }
+
+    
+    @Override
+    public void configure(Scanner scanner) {
+        System.out.println("\nConfiguring " + getName() + " Strategy");
+        System.out.print("Enter period (default: " + parameters.get("period") + "): ");
+        String input = scanner.nextLine();
+        // ...
+    }
+
+    @Override
+    public Order processMarketData(MarketData marketData, Map<String, Position> positions) {
+        currentPrice = marketData.getClose();
+        String symbol = marketData.getSymbol();
+    }
+
+    @Override
+    public int getMinIndex() {
+        int period = parameters.containsKey("period") ? 
+                    (int) getIntegerParameter("period") : 20;
+        return period;
+    }
+
+    @Override
+    protected boolean extraValidations() {
+        return true;
+    }
+    
+    @Override
+    public void reset() {
+        super.reset();
+        prices.clear();
+        // ...
+        currentPrice = 0.0;
+    }
+}
+```
 
 ## Configuration
 
-Adjust simulation parameters in the `config.py` file:
-
-```python
-# Example configuration
-CONFIG = {
-    'default_capital': 10000,
-    'commission_rate': 0.001,
-    'risk_free_rate': 0.02,
-    'data_source': 'yahoo',
-    'log_level': 'INFO'
-}
-```
+Key configuration files:
+- `StrategyOptimizationReportTest.java`: Parameter ranges for optimization
 
 ## Contributing
 
