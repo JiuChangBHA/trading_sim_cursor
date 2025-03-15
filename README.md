@@ -13,13 +13,65 @@ This project provides a robust environment for simulating trading activities and
 ## Project Structure
 
 - `src/main/java/`: Core Java implementation of the trading simulator and strategies
-- `src/main/python/`: Python scripts for data loading and processing
+- `src/main/python/`: Python scripts for data loading
 - `src/test/java/`: Test classes including strategy optimization tests
 - `resources/`: 
   - `lib/market_data/`: Directory for storing market data
   - `optimization_reports/`: Saved optimization results
   - `simulation_results/`: Saved simulation results
   - `visualization/`: Scripts for visualizing results
+
+### Directory Tree
+```
+trading_sim/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   ├── com/
+│   │   │   │   └── tradingsim/
+│   │   │   │       ├── model/
+│   │   │   │       │   ├── MarketData.java
+│   │   │   │       │   ├── Order.java
+│   │   │   │       │   └── Position.java
+│   │   │   │       ├── strategy/
+│   │   │   │       │   ├── BaseStrategy.java
+│   │   │   │       │   ├── MovingAverageStrategy.java
+│   │   │   │       │   ├── RSIStrategy.java
+│   │   │   │       │   └── MACDStrategy.java
+│   │   │   │       └── model/
+│   │   │   │           ├── MarketDataLoader.java
+│   │   │   │           ├── OptimizationResult.java
+│   │   │   │           ├── SimulationResult.java
+│   │   │   │           ├── StrategyOptimizer.java
+│   │   │   │           ├── TradingAccount.java
+│   │   │   │           └── TradingSimulator.java
+│   │   ├── python/
+│   │   │   └── RealTimeMarketDataLoader.py
+│   │   └── resources/
+│   │       ├── lib
+│   │       │   └── json-simple-1.1.1.jar
+│   │       ├── market_data
+│   │       ├── optimization_reports
+│   │       ├── simulation_results
+│   │       ├── visualization
+│   │       │   └── trading_visualization.jar
+│   │       └── logging.properties
+│   └── test/
+│       └── java/
+│           └── com/
+│               └── tradingsim/
+│                   ├── TradingSimulatorTest.java
+│                   ├── StrategyOptimization.java
+│                   ├── StrategyOptimizationReportTest.java
+│                   └── strategy/
+│                       ├── MeanReversionStrategyTest.java
+│                       ├── RSIStrategyTest.java
+│                       ├── MovingAverageCrossoverStrategyTest.java
+│                       └── BollingerBandsStrategyTest.java
+├── pom.xml
+├── README.md
+└── LICENSE
+```
 
 ## Getting Started
 
